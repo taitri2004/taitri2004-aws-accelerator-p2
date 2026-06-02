@@ -1,0 +1,56 @@
+# nginx-demo.yaml — W8-D2 demo: Deployment + Service
+# Mục tiêu: thấy tận mắt Deployment -> ReplicaSet -> Pod, Service, probes,
+# self-healing, scaling, rolling update.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: web
+spec:
+  replicas: 3 # mong muốn 3 bản Pod
+  selector:
+    matchLabels:
+      app: web # PHẢI khớp labels của template bên dưới
+  template:
+    metadata:
+      labels:
+        app: web # Service sẽ tìm Pod qua label này
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests: # tối thiểu được đảm bảo (scheduler dùng để xếp Pod)
+              cpu: "50m"
+              memory: "32Mi"
+            limits: # trần tối đa (vượt memory -> OOMKilled)
+              cpu: "200m"
+              memory: "64Mi"
+          readinessProbe: # sẵn sàng nhận traffic chưa? fail -> gỡ khỏi Service
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe: # còn sống không? fail -> kubelet restart container
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: NodePort # mở port trên node để truy cập từ ngoài (hợp với minikube)
+  selector:
+    app: web # gom mọi Pod có label app=web
+  ports:
+    - port: 80 # port của Service (trong cluster)
+      targetPort: 80 # port của container
