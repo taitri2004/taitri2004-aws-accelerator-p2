@@ -1,0 +1,28 @@
+# backend.tf.example — Remote State (Module 04 trong deck của Minh)
+# ĐÂY LÀ FILE VÍ DỤ (đuôi .example nên Terraform KHÔNG đọc).
+# Muốn thử thật: đổi tên thành backend.tf, tạo trước bucket S3, rồi `terraform init`.
+
+# ─── CÁCH MINH DẠY (S3 + DynamoDB lock) ───────────────────────────
+# terraform {
+#   backend "s3" {
+#     bucket         = "<tên-bucket-state-của-bạn>"   # phải tạo TRƯỚC bằng tay/CLI
+#     key            = "w8/day-c/terraform.tfstate"
+#     region         = "ap-southeast-1"
+#     encrypt        = true
+#     dynamodb_table = "terraform-state-lock"          # bảng DynamoDB để khoá
+#   }
+# }
+
+# ─── CÁCH MỚI (Terraform 1.10+, KHÔNG cần DynamoDB) ───────────────
+# terraform {
+#   backend "s3" {
+#     bucket       = "<tên-bucket-state-của-bạn>"
+#     key          = "w8/day-c/terraform.tfstate"
+#     region       = "ap-southeast-1"
+#     encrypt      = true
+#     use_lockfile = true   # khoá native bằng file .tflock trên S3
+#   }
+# }
+
+# GHI VÀO NOTES: vì sao remote state quan trọng cho team?
+# -> chia sẻ state + state locking (chống 2 người apply cùng lúc) + versioning/backup.
