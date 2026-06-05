@@ -6,13 +6,85 @@ data:
   index.html: |
     <!DOCTYPE html>
     <html lang="vi">
-    <head><meta charset="utf-8"><title>${app_name}</title></head>
-    <body style="font-family:sans-serif;text-align:center;padding-top:60px;background:#0f172a;color:#e2e8f0;">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${app_name} - K8s on AWS</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{min-height:100vh;display:grid;place-items:center;padding:24px;color:#e8eefc;
+      font-family:system-ui,'Segoe UI',sans-serif;
+      background:linear-gradient(-45deg,#0f172a,#1e3a8a,#0e7490,#7c3aed);
+      background-size:400% 400%;animation:bg 18s ease infinite}
+    @keyframes bg{0% {background-position:0 50%}50% {background-position:100% 50%}100% {background-position:0 50%}}
+    .card{width:min(92vw,640px);padding:38px 34px;border-radius:24px;text-align:center;
+      background:rgba(255,255,255,.08);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.18);box-shadow:0 20px 60px rgba(0,0,0,.45);
+      animation:rise .8s cubic-bezier(.16,1,.3,1) both}
+    @keyframes rise{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
+    .logo{font-size:54px;animation:float 3s ease-in-out infinite}
+    @keyframes float{0%,100% {transform:translateY(0)}50% {transform:translateY(-10px)}}
+    h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:6px 0 4px;
+      background:linear-gradient(90deg,#a5b4fc,#67e8f9,#f0abfc);
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{color:#aebdd6;font-size:14px;margin-bottom:22px}
+    .pod{margin:0 auto 6px;display:inline-flex;align-items:center;gap:10px;padding:12px 20px;
+      border-radius:14px;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.45);
+      font-family:ui-monospace,Menlo,monospace}
+    .pod b{font-size:18px;color:#6ee7b7}
+    .dot{width:10px;height:10px;border-radius:50%;background:#34d399;
+      box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pulse 1.6s infinite}
+    @keyframes pulse{70% {box-shadow:0 0 0 12px rgba(52,211,153,0)}100% {box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+    .meta{padding:10px 12px;border-radius:12px;text-align:left;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+    .meta span{display:block;font-size:11px;color:#93a4c4;text-transform:uppercase;letter-spacing:.06em}
+    .meta code{font-family:ui-monospace,monospace;font-size:13px;color:#dbe6ff}
+    .path{font-size:12px;color:#9fb0cd;margin:8px 0 18px;line-height:1.9}
+    .path b{color:#c7d6f5}
+    button{cursor:pointer;border:none;padding:12px 22px;border-radius:12px;font-size:14px;font-weight:700;
+      color:#0f172a;background:linear-gradient(90deg,#67e8f9,#a5b4fc);
+      box-shadow:0 8px 22px rgba(103,232,249,.3);transition:transform .15s}
+    button:hover{transform:translateY(-2px)}
+    .hint{margin-top:14px;font-size:12px;color:#8ea3c6}
+    .foot{margin-top:18px;font-size:11px;color:#6b7ea0}
+    </style>
+    </head>
+    <body>
+    <div class="card">
       <h1>${app_name}</h1>
-      <p>HTML page served by nginx inside Kubernetes kind on EC2.</p>
-      <p>Traffic path: AWS ALB -> EC2 NodePort -> Kubernetes Service -> nginx Pod.</p>
+      <div class="sub">Kubernetes kind on EC2, exposed through AWS ALB</div>
+
+      <div class="pod"><span class="dot"></span> Served by Pod: <b>__POD_NAME__</b></div>
+
+      <div class="grid">
+        <div class="meta"><span>Pod IP</span><code>__POD_IP__</code></div>
+        <div class="meta"><span>Node</span><code>__NODE__</code></div>
+      </div>
+
+      <div class="path"><b>Internet</b> -> <b>ALB :80</b> -> <b>EC2 :30080</b> -> <b>kind NodePort</b> -> <b>Service</b> -> <b>Pod nginx</b></div>
+
+      <button onclick="location.reload()">Reload through ALB</button>
+      <div class="foot">W8 Lab - 1-click Terraform - taitri2004-aws-accelerator-p2</div>
+    </div>
     </body>
     </html>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      keepalive_timeout 0;
+      location / {
+        root /usr/share/nginx/html;
+        index index.html;
+      }
+    }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -20,21 +92,49 @@ metadata:
   name: web
   labels: { app: web }
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels: { app: web }
   template:
     metadata:
       labels: { app: web }
     spec:
+      volumes:
+        - name: tpl
+          configMap: { name: web-html }
+        - name: www
+          emptyDir: {}
+        - name: nginxconf
+          configMap: { name: nginx-conf }
+      initContainers:
+        - name: render
+          image: busybox:1.36
+          env:
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+          command:
+            - sh
+            - -c
+            - |
+              sed -e "s/__POD_NAME__/$POD_NAME/g" \
+                  -e "s/__POD_IP__/$POD_IP/g" \
+                  -e "s/__NODE__/$NODE_NAME/g" \
+                  /tpl/index.html > /www/index.html
+          volumeMounts:
+            - { name: tpl, mountPath: /tpl, readOnly: true }
+            - { name: www, mountPath: /www }
       containers:
         - name: web
           image: nginx:1.27-alpine
           ports:
             - containerPort: 80
           volumeMounts:
-            - name: html
-              mountPath: /usr/share/nginx/html
+            - { name: www, mountPath: /usr/share/nginx/html, readOnly: true }
+            - { name: nginxconf, mountPath: /etc/nginx/conf.d/default.conf, subPath: default.conf, readOnly: true }
           readinessProbe:
             httpGet: { path: /, port: 80 }
             initialDelaySeconds: 3
@@ -43,10 +143,6 @@ spec:
             httpGet: { path: /, port: 80 }
             initialDelaySeconds: 5
             periodSeconds: 10
-      volumes:
-        - name: html
-          configMap:
-            name: web-html
 ---
 apiVersion: v1
 kind: Service
