@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kubernetes — Part 2: In Practice + Hands-on Lab + Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand-primary: #0f172a;
+  --brand-accent: #f59e0b;
+  --brand-accent-2: #fb923c;
+  --brand-secondary: #3b82f6;
+  --brand-danger: #ef4444;
+  --brand-success: #22c55e;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --surface-dark: #ffffff;
+  --surface-card: #f8fafc;
+  --gradient-warm: linear-gradient(135deg, #f59e0b, #ef4444);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; overflow-x: hidden; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--surface-dark); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.slide {
+  min-height: 100vh; width: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: clamp(32px, 5vh, 80px) clamp(24px, 5vw, 120px); position: relative; overflow: hidden;
+}
+.slide-title { background: var(--surface-dark); text-align: center; }
+.slide-title::before { content: ''; position: absolute; top: -30%; right: -20%; width: 60%; height: 80%; background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%); pointer-events: none; }
+.slide-title::after { content: ''; position: absolute; bottom: -20%; left: -15%; width: 50%; height: 60%; background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%); pointer-events: none; }
+.slide-title h1 { font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 16px; }
+.slide-title .lead { font-size: clamp(1rem, 2vw, 1.3rem); color: var(--text-secondary); max-width: 760px; }
+.gradient-text { background: var(--gradient-warm); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.slide-divider { background: var(--surface-dark); text-align: center; }
+.slide-divider::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(245,158,11,0.06) 0%, transparent 60%); pointer-events: none; }
+.section-number { font-family: 'JetBrains Mono', monospace; font-size: clamp(5rem, 12vw, 10rem); font-weight: 700; -webkit-text-stroke: 2px rgba(245,158,11,0.2); color: transparent; line-height: 1; margin-bottom: -20px; }
+.section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--brand-accent); margin-bottom: 8px; }
+.slide-divider h2 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+.slide-divider .lead { font-size: clamp(0.95rem, 1.5vw, 1.15rem); color: var(--text-secondary); margin-top: 12px; max-width: 640px; }
+.slide-content { width: 100%; max-width: 1100px; }
+.slide-header { margin-bottom: clamp(20px, 3vh, 40px); }
+.slide-header h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+.slide-header .lead { font-size: clamp(0.85rem, 1.2vw, 1rem); color: var(--text-secondary); margin-top: 6px; }
+.slide-footer { position: absolute; bottom: 20px; left: 40px; right: 40px; display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.eyebrow { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--brand-accent); margin-bottom: 8px; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; }
+.badge-accent { background: rgba(245,158,11,0.15); color: var(--brand-accent); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--brand-secondary); }
+.badge-danger { background: rgba(239,68,68,0.15); color: var(--brand-danger); }
+.badge-success { background: rgba(34,197,94,0.15); color: var(--brand-success); }
+.grid { display: grid; gap: clamp(12px, 2vw, 20px); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 12px; padding: clamp(16px, 2vw, 24px); transition: transform 0.3s var(--ease-out); }
+.card:hover { transform: translateY(-2px); }
+.card h3 { font-size: clamp(0.9rem, 1.3vw, 1.1rem); font-weight: 700; margin-bottom: 8px; }
+.card p, .card li { font-size: clamp(0.8rem, 1vw, 0.9rem); color: var(--text-secondary); line-height: 1.5; }
+.card-dark { background: var(--brand-primary); border-color: rgba(245,158,11,0.2); color:#e2e8f0; }
+.card-dark h3 { color:#fff; }
+.card-accent { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,146,60,0.05)); border-color: rgba(245,158,11,0.3); }
+.card-accent h3 { color: var(--brand-accent); }
+.card-number { font-family: 'JetBrains Mono', monospace; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 700; color: var(--brand-accent); line-height: 1; }
+.card-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+.flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; }
+.flow-step { background: var(--surface-card); border: 1px solid var(--border); border-radius: 10px; padding: clamp(10px, 1.5vw, 18px) clamp(14px, 2vw, 22px); text-align: center; font-size: clamp(0.75rem, 1vw, 0.88rem); font-weight: 600; }
+.flow-arrow { color: var(--brand-accent); font-size: 1.2rem; padding: 0 6px; flex-shrink: 0; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.stat { text-align: center; padding: 16px; }
+.bullets { list-style: none; padding: 0; }
+.bullets li { padding: 8px 0 8px 24px; position: relative; font-size: clamp(0.85rem, 1.1vw, 0.95rem); color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.bullets li:last-child { border-bottom: none; }
+.bullets li::before { content: ''; position: absolute; left: 0; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand-accent); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 3vw, 40px); align-items: start; }
+table { width: 100%; border-collapse: collapse; font-size: clamp(0.78rem, 1vw, 0.88rem); }
+th { text-align: left; padding: 10px 14px; background: rgba(30,41,59,0.8); color: var(--brand-accent); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 2px solid rgba(245,158,11,0.3); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+tr:hover td { background: rgba(51,65,85,0.06); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: rgba(51,65,85,0.12); padding: 2px 6px; border-radius: 4px; color:#0f172a; }
+.code-block { background:#0f172a; border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:16px 18px; font-family:'JetBrains Mono',monospace; font-size:clamp(0.7rem,0.92vw,0.84rem); color:#e2e8f0; line-height:1.65; overflow-x:auto; white-space:pre; }
+.code-block .cmt { color:#64748b; } .code-block .kw { color:#f59e0b; } .code-block .str { color:#34d399; } .code-block .fn { color:#60a5fa; } .code-block .out { color:#94a3b8; }
+.lab-tag { display:inline-block; background:var(--gradient-warm); color:#fff; font-weight:800; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; padding:4px 12px; border-radius:6px; margin-bottom:10px; }
+.do-now { display:flex; align-items:center; gap:8px; font-weight:700; color:var(--brand-accent); font-size:0.82rem; margin:4px 0 8px; }
+.checkpoint { background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px 16px; font-size:0.84rem; color:var(--text-secondary); }
+.checkpoint strong { color:var(--brand-success); }
+.meta-chips { display: flex; gap: 12px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+.chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: var(--surface-card); border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem; color: var(--text-secondary); }
+.chip strong { color: var(--text-primary); }
+.reveal { opacity: 1; }
+.stagger > * { opacity: 1; }
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--gradient-warm); z-index: 1000; width: 0%; transition: width 0.3s; }
+.nav-dots { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(148,163,184,0.3); cursor: pointer; transition: all 0.3s; border: none; padding: 0; }
+.nav-dot.active { background: var(--brand-accent); transform: scale(1.4); }
+.slide-counter { position: fixed; bottom: 20px; right: 24px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted); z-index: 1000; }
+.slide-counter strong { color: var(--text-primary); }
+.slide-closing { text-align: center; }
+.slide-closing h2 { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 16px; }
+.refs { margin-top:16px; padding:10px 14px; background:#1e293b; border-radius:8px; font-size:0.72rem; color:#94a3b8; line-height:1.6; }
+.refs a { color:#60a5fa; text-decoration:none; } .refs a:hover { text-decoration:underline; }
+@media (max-width: 767px) { .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .two-col{grid-template-columns:1fr;} .flow{flex-direction:column;} .flow-arrow{transform:rotate(90deg);} .nav-dots{display:none;} }
+@media (max-height: 700px) { .slide { padding: 24px 20px; } }
+@media (prefers-reduced-motion: reduce) { .reveal,.stagger>*{opacity:1;transform:none;transition:none;} html{scroll-behavior:auto;} }
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progress"></div>
+<nav class="nav-dots" id="navDots"></nav>
+<div class="slide-counter" id="counter"><strong>01</strong> / 35</div>
+
+<!-- ========== SLIDE 1: Title ========== -->
+<section class="slide slide-title">
+  <div class="eyebrow">Kubernetes Day &middot; Buổi chiều</div>
+  <h1>Part 2 — <span class="gradient-text">Kubernetes in Practice</span></h1>
+  <p class="lead">Networking, probes, scaling, rollout — rồi <strong>hands-on lab minikube/kind gõ theo tại chỗ</strong>. Cuối buổi: đề challenge.</p>
+  <div class="meta-chips">
+    <div class="chip"><strong>Thời lượng</strong> ~3.5h</div>
+    <div class="chip"><strong>Tiền đề</strong> Part 1 (Core)</div>
+    <div class="chip"><strong>Chuẩn bị</strong> Docker + terminal sẵn sàng</div>
+  </div>
+</section>
+
+<!-- Slide 2: roadmap -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Lộ trình buổi chiều</div>
+      <h2>Học khái niệm → tự tay làm trong lab</h2>
+    </div>
+    <div class="grid grid-3 reveal stagger">
+      <div class="card"><h3>① Networking</h3><p>Service (ClusterIP / NodePort / LoadBalancer), DNS nội bộ, Ingress.</p></div>
+      <div class="card"><h3>② Health</h3><p>Liveness / readiness / startup probe — running ≠ ready.</p></div>
+      <div class="card"><h3>③ Scaling</h3><p>Resource requests/limits, scale tay, HPA tự động.</p></div>
+      <div class="card"><h3>④ Rollout</h3><p>Rolling update, rollback an toàn.</p></div>
+      <div class="card"><h3>⑤ Workloads</h3><p>ReplicaSet (cơ chế), StatefulSet, DaemonSet.</p></div>
+      <div class="card"><h3>⑥ Storage</h3><p>Volume · PV · PVC · StorageClass + dynamic provisioning.</p></div>
+      <div class="card card-accent"><h3>⑦ Hands-on Lab</h3><p><strong>Gõ theo:</strong> dựng cụm → deploy → expose → scale → rollout → debug.</p></div>
+      <div class="card card-accent"><h3>⑧ Challenge</h3><p>Nhận <strong>đề bài</strong> — tự thiết kế &amp; tìm lời giải.</p></div>
+    </div>
+    <div class="checkpoint reveal" style="margin-top:14px; max-width:900px;">👉 <strong>Mở terminal ngay bây giờ.</strong> Phần ①–⑥ là nền; từ phần ⑦ các bạn gõ song song với slide. Cần: Docker đang chạy + quyền cài <code>minikube</code>/<code>kind</code>/<code>kubectl</code>.</div>
+  </div>
+  <div class="slide-footer"><span>Roadmap</span></div>
+</section>
+
+<!-- ========== SECTION 1: Networking ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">01</div>
+  <div class="section-label">Networking &amp; Services</div>
+  <h2>Làm sao traffic <span class="gradient-text">đến được</span> Pod?</h2>
+  <p class="lead">Service — địa chỉ ổn định trước nhóm Pod ephemeral</p>
+</section>
+
+<!-- Slide 4: service concept -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">The Problem</div>
+      <h2>Pod có IP, nhưng IP đổi liên tục — gọi kiểu gì?</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>Vấn đề</h3>
+        <ul class="bullets">
+          <li>Pod chết → sinh lại với IP mới</li>
+          <li>Scale 3→5 → có 5 IP, ai biết hết?</li>
+          <li>Client không thể bám IP Pod được</li>
+        </ul>
+      </div>
+      <div class="card card-accent">
+        <h3>Lời giải: Service</h3>
+        <p>Một địa chỉ <strong>ổn định</strong> (IP + DNS name) đứng trước nhóm Pod. Service dùng <em>label selector</em> để tự cập nhật danh sách Pod đứng sau, và load-balance traffic tới chúng.</p>
+      </div>
+    </div>
+    <div class="flow reveal stagger" style="margin-top:20px;">
+      <div class="flow-step">Client</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step" style="border-color:var(--brand-accent);"><strong>Service</strong><div style="font-size:0.72rem;color:var(--text-muted);">IP + DNS ổn định</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step">Pod 1</div>
+      <div class="flow-step">Pod 2</div>
+      <div class="flow-step">Pod 3</div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>01 — Networking &amp; Services</span></div>
+</section>
+
+<!-- Slide 5: service types -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Core</div>
+      <h2>3 loại Service — chọn đúng cách expose</h2>
+    </div>
+    <div class="reveal">
+      <table>
+        <thead><tr><th>Type</th><th>Truy cập được từ đâu</th><th>Dùng khi</th></tr></thead>
+        <tbody>
+          <tr><td><strong style="color:var(--text-primary)">ClusterIP</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">mặc định</span></td><td>Chỉ <em>trong</em> cụm</td><td>Service nội bộ (DB, API backend) gọi nhau</td></tr>
+          <tr><td><strong style="color:var(--text-primary)">NodePort</strong></td><td>IP của <em>node</em> + 1 cổng cao (30000–32767)</td><td>Expose ra ngoài cụm qua port của node — đơn giản, không cần cloud LB</td></tr>
+          <tr><td><strong style="color:var(--text-primary)">LoadBalancer</strong></td><td>IP public do cloud cấp</td><td>Production trên cloud — tự gọi API tạo LB. Cần cloud controller</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="two-col reveal" style="margin-top:14px;">
+      <div>
+        <div class="code-block"><span class="kw">apiVersion:</span> v1
+<span class="kw">kind:</span> Service
+<span class="kw">metadata:</span> {<span class="kw">name:</span> web}
+<span class="kw">spec:</span>
+  <span class="kw">type:</span> NodePort
+  <span class="kw">selector:</span> {<span class="kw">app:</span> web}   <span class="cmt"># tìm Pod qua label</span>
+  <span class="kw">ports:</span>
+  - <span class="kw">port:</span> 80           <span class="cmt"># cổng của Service</span>
+    <span class="kw">targetPort:</span> 80     <span class="cmt"># cổng trong Pod</span></div>
+      </div>
+      <div class="card"><h3>Mẹo nhớ</h3>
+        <ul class="bullets">
+          <li><strong>ClusterIP:</strong> nội bộ</li>
+          <li><strong>NodePort:</strong> ra ngoài qua port của máy</li>
+          <li><strong>LoadBalancer:</strong> ra ngoài qua LB của cloud</li>
+        </ul>
+        <p style="margin-top:8px;">Cả ba đều dùng <em>cùng cơ chế selector</em> — chỉ khác phạm vi truy cập.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>01 — Networking &amp; Services</span></div>
+</section>
+
+<!-- Slide 6: service discovery / DNS -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Service Discovery</div>
+      <h2>DNS nội bộ — service gọi nhau bằng tên</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>Mỗi Service = 1 DNS name</h3>
+        <p>CoreDNS trong cụm tự tạo bản ghi cho mỗi Service. App không cần biết IP — chỉ cần biết tên.</p>
+        <div class="code-block" style="margin-top:10px;"><span class="cmt"># trong cùng namespace</span>
+http://web
+
+<span class="cmt"># đầy đủ (khác namespace)</span>
+http://web.default.svc.cluster.local</div>
+      </div>
+      <div class="card card-accent">
+        <h3>Vì sao điều này quan trọng</h3>
+        <ul class="bullets">
+          <li>Frontend gọi <code>http://api</code> — không cần config IP</li>
+          <li>Scale, restart, đổi node → tên không đổi</li>
+          <li>Đây là "service discovery" miễn phí, có sẵn</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>01 — Networking &amp; Services</span></div>
+</section>
+
+<!-- Slide 7: ingress -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Layer 7</div>
+      <h2>Ingress — định tuyến HTTP theo host/path</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>Service là L4, Ingress là L7</h3>
+        <p>NodePort/LoadBalancer chỉ biết port. Ingress hiểu HTTP: route theo <code>host</code> và <code>path</code> — một entrypoint cho nhiều service.</p>
+        <ul class="bullets" style="margin-top:8px;">
+          <li><code>shop.com/api</code> → service api</li>
+          <li><code>shop.com/web</code> → service web</li>
+          <li>TLS termination, virtual host</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Cần Ingress Controller</h3>
+        <p>Ingress chỉ là <em>luật</em> — phải có controller (nginx-ingress, Traefik) thực thi nó. Không cài controller thì Ingress object không làm gì cả.</p>
+        <p style="margin-top:8px;"><span class="badge badge-blue">Khi nào cần</span> Khi có nhiều service cùng chia sẻ một entrypoint, hoặc cần route theo path/host + TLS.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>01 — Networking &amp; Services</span></div>
+</section>
+
+<!-- ========== SECTION 2: Health ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">02</div>
+  <div class="section-label">Health &amp; Self-healing</div>
+  <h2>Làm sao K8s biết Pod <span class="gradient-text">khoẻ</span>?</h2>
+  <p class="lead">Probes — running ≠ ready</p>
+</section>
+
+<!-- Slide 9: probes -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Core</div>
+      <h2>3 loại probe — đừng nhầm chúng</h2>
+    </div>
+    <div class="grid grid-3 reveal stagger">
+      <div class="card" style="border-top:3px solid var(--brand-danger);"><h3>livenessProbe</h3><p>"Pod còn sống không?" Fail → K8s <strong>restart</strong> container. Bắt deadlock/treo.</p></div>
+      <div class="card" style="border-top:3px solid var(--brand-success);"><h3>readinessProbe</h3><p>"Sẵn sàng nhận traffic chưa?" Fail → K8s <strong>gỡ Pod khỏi Service</strong> (không restart). Bắt lúc đang khởi động/quá tải.</p></div>
+      <div class="card" style="border-top:3px solid var(--brand-secondary);"><h3>startupProbe</h3><p>"Khởi động xong chưa?" Cho app chậm khởi động thêm thời gian trước khi liveness bắt đầu chấm.</p></div>
+    </div>
+    <div class="reveal" style="margin-top:14px;">
+      <div class="code-block"><span class="kw">readinessProbe:</span>
+  <span class="kw">httpGet:</span> {<span class="kw">path:</span> /healthz, <span class="kw">port:</span> 80}
+  <span class="kw">initialDelaySeconds:</span> 5
+  <span class="kw">periodSeconds:</span> 10
+<span class="kw">livenessProbe:</span>
+  <span class="kw">httpGet:</span> {<span class="kw">path:</span> /healthz, <span class="kw">port:</span> 80}
+  <span class="kw">periodSeconds:</span> 10</div>
+    </div>
+    <div class="card card-accent reveal" style="margin-top:12px; max-width:880px;">
+      <p style="font-size:0.85rem;"><strong>Bẫy kinh điển:</strong> không có readiness probe → traffic dội vào Pod chưa kịp khởi động → 502/timeout. <em>Running</em> không có nghĩa là <em>ready</em>.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>02 — Health &amp; Self-healing</span></div>
+</section>
+
+<!-- ========== SECTION 3: Scaling ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">03</div>
+  <div class="section-label">Scaling &amp; Resources</div>
+  <h2>Cho Pod đúng <span class="gradient-text">tài nguyên</span>, scale theo tải</h2>
+  <p class="lead">requests/limits + HPA</p>
+</section>
+
+<!-- Slide 11: resources -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Resources</div>
+      <h2>requests vs limits — scheduler &amp; OOM</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>requests = "tối thiểu cần"</h3>
+        <p>Scheduler dùng để chọn node đủ chỗ. Đặt thấp → Pod chen chúc, đói tài nguyên. Đặt cao → lãng phí, khó schedule.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--brand-danger);">
+        <h3>limits = "trần cứng"</h3>
+        <p>Vượt CPU limit → bị throttle. Vượt memory limit → container bị <strong>OOMKilled</strong> (kill + restart).</p>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:14px;">
+      <div class="code-block"><span class="kw">resources:</span>
+  <span class="kw">requests:</span> {<span class="kw">cpu:</span> <span class="str">"100m"</span>, <span class="kw">memory:</span> <span class="str">"128Mi"</span>}
+  <span class="kw">limits:</span>   {<span class="kw">cpu:</span> <span class="str">"500m"</span>, <span class="kw">memory:</span> <span class="str">"256Mi"</span>}
+<span class="cmt"># 100m = 0.1 CPU core; Mi = mebibyte</span></div>
+    </div>
+    <div class="card card-accent reveal" style="margin-top:12px; max-width:860px;">
+      <p style="font-size:0.85rem;">Không đặt requests/limits → 1 Pod tham ăn có thể làm đói cả node. Production luôn đặt — và đây cũng là điều kiện cần để HPA hoạt động.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>03 — Scaling &amp; Resources</span></div>
+</section>
+
+<!-- Slide 12: scaling + HPA -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Autoscaling</div>
+      <h2>Scale tay → scale tự động (HPA)</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="code-block"><span class="cmt"># Scale tay</span>
+kubectl scale deploy/web --replicas=5
+
+<span class="cmt"># HPA: tự scale 2→10 khi CPU &gt; 70%</span>
+kubectl autoscale deploy/web \
+  --min=2 --max=10 --cpu-percent=70</div>
+        <div class="card" style="margin-top:12px;"><h3>HPA cần gì?</h3>
+          <ul class="bullets">
+            <li>metrics-server cài trong cụm</li>
+            <li>Pod có <code>resources.requests</code> (để tính %)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card card-accent">
+        <h3>Cơ chế HPA</h3>
+        <p>HPA là một control loop nữa: định kỳ đọc metric (CPU/memory/custom) → tính số replica cần → cập nhật Deployment. Cùng tinh thần "reconcile to desired state" — chỉ là desired state giờ được <em>tính ra</em> từ tải thực tế.</p>
+        <div class="flow" style="margin-top:12px; justify-content:flex-start;">
+          <div class="flow-step" style="font-size:0.72rem;">đọc metric</div>
+          <div class="flow-arrow">&#8594;</div>
+          <div class="flow-step" style="font-size:0.72rem;">tính replica</div>
+          <div class="flow-arrow">&#8594;</div>
+          <div class="flow-step" style="font-size:0.72rem;">scale</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>03 — Scaling &amp; Resources</span></div>
+</section>
+
+<!-- ========== SECTION 4: Rollout ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">04</div>
+  <div class="section-label">Rollout &amp; Updates</div>
+  <h2>Deploy version mới <span class="gradient-text">không downtime</span></h2>
+  <p class="lead">Rolling update, rollback</p>
+</section>
+
+<!-- Slide 14: rolling update / rollback -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Core</div>
+      <h2>Rolling update — thay Pod từ từ</h2>
+    </div>
+    <div class="reveal">
+      <div class="flow stagger" style="margin-bottom:16px;">
+        <div class="flow-step">v1 ×3</div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step" style="border-color:var(--brand-accent);">v1 ×2 + v2 ×1</div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step" style="border-color:var(--brand-accent);">v1 ×1 + v2 ×2</div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step" style="border-color:var(--brand-success);">v2 ×3</div>
+      </div>
+      <div class="code-block"><span class="cmt"># Cập nhật image → rollout tự động</span>
+kubectl set image deploy/web web=myapp:v2
+kubectl rollout status deploy/web      <span class="cmt"># theo dõi tiến trình</span>
+
+<span class="cmt"># Phát hiện lỗi → rollback ngay</span>
+kubectl rollout undo deploy/web
+kubectl rollout history deploy/web     <span class="cmt"># xem các revision</span></div>
+    </div>
+    <div class="grid grid-2 reveal" style="margin-top:12px;">
+      <div class="card"><h3>maxSurge / maxUnavailable</h3><p>Điều khiển tốc độ: bao nhiêu Pod mới được tạo thêm, bao nhiêu Pod cũ được phép tắt cùng lúc.</p></div>
+      <div class="card card-accent"><h3>readiness probe là tuyến phòng thủ</h3><p>Rollout chỉ tiến khi Pod mới <em>ready</em>. Probe sai → version lỗi vẫn nhận traffic. Ta sẽ thấy điều này trong lab.</p></div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>04 — Rollout &amp; Updates</span></div>
+</section>
+
+<!-- ========== SECTION 5: WORKLOAD CONTROLLERS ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">05</div>
+  <div class="section-label">Workload Controllers</div>
+  <h2>Không chỉ có <span class="gradient-text">Deployment</span></h2>
+  <p class="lead">ReplicaSet (cơ chế) · StatefulSet · DaemonSet — đúng controller cho đúng việc</p>
+</section>
+
+<!-- Slide: controllers overview + ReplicaSet mechanism -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Bản đồ controller</div>
+      <h2>Mỗi loại workload có một controller riêng</h2>
+    </div>
+    <div class="reveal">
+      <table>
+        <thead><tr><th>Controller</th><th>Giữ gì</th><th>Pod</th><th>Dùng khi</th></tr></thead>
+        <tbody>
+          <tr><td><strong style="color:var(--text-primary)">Deployment → ReplicaSet</strong></td><td>N bản giống hệt</td><td>Vô danh, thay thế tự do, IP/tên random</td><td>App stateless: web, API</td></tr>
+          <tr style="background:rgba(245,158,11,0.06);"><td><strong style="color:var(--brand-accent)">StatefulSet</strong></td><td>N bản có danh tính</td><td>Tên cố định (web-0,1,2) + storage riêng</td><td>Stateful: DB, Kafka, Zookeeper</td></tr>
+          <tr><td><strong style="color:var(--text-primary)">DaemonSet</strong></td><td>1 Pod / mỗi node</td><td>Theo node, không theo số</td><td>Agent: log, metrics, CNI</td></tr>
+          <tr><td><strong style="color:var(--text-primary)">Job / CronJob</strong></td><td>Chạy tới xong / theo lịch</td><td>Chạy rồi kết thúc</td><td>Batch, backup, migration</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-accent reveal" style="margin-top:16px; max-width:900px;">
+      <h3>Cơ chế ReplicaSet (engine đứng sau Deployment)</h3>
+      <p style="font-size:0.88rem;">ReplicaSet controller <em>watch</em> mọi Pod khớp <code>selector</code> → đếm số đang sống → so với <code>spec.replicas</code> → thiếu thì tạo, thừa thì xoá. Đúng vòng lặp reconcile sáng nay. <strong>Deployment KHÔNG tự quản Pod</strong> — nó quản ReplicaSet: mỗi version một RS, rolling update = dịch dần giữa RS cũ và RS mới.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>05 — Workload Controllers</span></div>
+</section>
+
+<!-- Slide: StatefulSet -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">StatefulSet</div>
+      <h2>Khi mỗi bản cần <span class="gradient-text">danh tính</span> + dữ liệu riêng</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="code-block"><span class="kw">kind:</span> StatefulSet
+<span class="kw">spec:</span>
+  <span class="kw">serviceName:</span> db      <span class="cmt"># headless svc → DNS ổn định</span>
+  <span class="kw">replicas:</span> 3
+  <span class="kw">template:</span> { <span class="cmt">... pod ...</span> }
+  <span class="kw">volumeClaimTemplates:</span>   <span class="cmt"># mỗi Pod 1 PVC riêng</span>
+  - <span class="kw">metadata:</span> {<span class="kw">name:</span> data}
+    <span class="kw">spec:</span> {<span class="kw">accessModes:</span> [ReadWriteOnce],
+           <span class="kw">resources:</span> {<span class="kw">requests:</span> {<span class="kw">storage:</span> 10Gi}}}</div>
+      </div>
+      <div class="stagger">
+        <div class="card" style="margin-bottom:10px;"><h3>Khác Deployment ở 3 điểm</h3>
+          <ul class="bullets">
+            <li><strong>Danh tính ổn định:</strong> Pod tên <code>db-0, db-1, db-2</code> — không phải hash random</li>
+            <li><strong>Thứ tự:</strong> tạo/xoá tuần tự 0→1→2 (DB cần master lên trước)</li>
+            <li><strong>Storage dính theo Pod:</strong> mỗi Pod 1 PVC riêng, giữ nguyên qua restart/reschedule</li>
+          </ul>
+        </div>
+        <div class="card card-accent"><h3>DNS ổn định</h3>
+          <p>Headless Service cho mỗi Pod một tên: <code>db-0.db.default.svc</code> — client biết chính xác đang nói chuyện với bản nào.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card reveal" style="margin-top:14px; max-width:920px;">
+      <p style="font-size:0.86rem;"><span class="badge badge-blue">Nối tới §06</span> Cái <code>volumeClaimTemplates</code> ở trên chính là cách StatefulSet xin storage riêng cho từng Pod — cơ chế PV/PVC ta học ngay phần sau.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>05 — Workload Controllers</span></div>
+</section>
+
+<!-- Slide: DaemonSet -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">DaemonSet</div>
+      <h2>Một Pod trên <span class="gradient-text">mỗi node</span> — không đếm replicas</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>Cơ chế</h3>
+        <p>DaemonSet controller <em>watch</em> danh sách node → đảm bảo mỗi node (khớp <code>nodeSelector</code> nếu có) chạy đúng <strong>1 Pod</strong>. Thêm node mới vào cụm → Pod tự mọc trên đó. Xoá node → Pod biến mất theo.</p>
+        <p style="margin-top:8px;">Không có <code>replicas</code>: số Pod = số node.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>Dùng cho hạ tầng "có mặt khắp nơi"</h3>
+        <ul class="bullets">
+          <li><strong>Log:</strong> Fluent Bit / Filebeat gom log mọi node</li>
+          <li><strong>Metrics:</strong> node-exporter, datadog-agent</li>
+          <li><strong>Network/Storage:</strong> CNI (Calico), CSI driver</li>
+        </ul>
+        <p style="margin-top:8px;">Bản thân kube-proxy cũng chạy dạng DaemonSet.</p>
+      </div>
+    </div>
+    <div class="card reveal" style="margin-top:14px; max-width:900px;">
+      <p style="font-size:0.86rem;"><strong>Mẹo nhớ:</strong> Deployment = "tôi muốn N bản, ở đâu cũng được". DaemonSet = "tôi muốn có mặt trên MỌI node". Câu hỏi quyết định: workload của bạn theo <em>số lượng</em> hay theo <em>từng máy</em>?</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>05 — Workload Controllers</span></div>
+</section>
+
+<!-- ========== SECTION 6: STORAGE ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">06</div>
+  <div class="section-label">Storage</div>
+  <h2>Dữ liệu <span class="gradient-text">sống sót</span> khi Pod chết</h2>
+  <p class="lead">Volume · PersistentVolume · PersistentVolumeClaim · StorageClass</p>
+</section>
+
+<!-- Slide: the problem + Volume + PV/PVC -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">The Problem</div>
+      <h2>Pod chết → mất sạch dữ liệu trong container</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card">
+        <h3>Vì sao cần storage tách rời</h3>
+        <p>Ghi vào filesystem của container là <em>ephemeral</em> — Pod restart/reschedule là mất. DB, upload, log… cần thứ <strong>sống lâu hơn Pod</strong>.</p>
+        <ul class="bullets" style="margin-top:8px;">
+          <li><code>emptyDir</code>: tạm, sống theo Pod (cache, scratch)</li>
+          <li><code>configMap/secret</code>: mount config vào Pod</li>
+          <li><strong>PV/PVC</strong>: storage bền, độc lập vòng đời Pod</li>
+        </ul>
+      </div>
+      <div class="card card-accent">
+        <h3>PV vs PVC — phép loại suy đặt phòng</h3>
+        <ul class="bullets">
+          <li><strong>PV</strong> (PersistentVolume) = phòng thật (EBS, NFS, disk) trong cụm</li>
+          <li><strong>PVC</strong> (PersistentVolumeClaim) = đơn xin của app: "cần 10Gi, RWO"</li>
+          <li>K8s <strong>khớp (bind)</strong> PVC ↔ PV; Pod chỉ mount PVC, không cần biết disk thật là gì</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flow reveal stagger" style="margin-top:18px;">
+      <div class="flow-step">Pod</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step" style="border-color:var(--brand-secondary);">PVC<div style="font-size:0.72rem;color:var(--text-muted)">đơn xin</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step" style="border-color:var(--brand-accent);">PV<div style="font-size:0.72rem;color:var(--text-muted)">storage thật</div></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step" style="border-color:var(--brand-success);">Disk (EBS/NFS)</div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>06 — Storage</span></div>
+</section>
+
+<!-- Slide: StorageClass + dynamic provisioning -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">StorageClass</div>
+      <h2>Tĩnh vs động — ai tạo PV?</h2>
+    </div>
+    <div class="grid grid-2 reveal">
+      <div class="card">
+        <h3>Tĩnh (static)</h3>
+        <p>Admin tạo PV sẵn bằng tay → PVC tới khớp. Phiền, không co giãn — ít dùng ở quy mô lớn.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>Động (dynamic) — cách thật trên cloud</h3>
+        <p><strong>StorageClass</strong> + provisioner. PVC chỉ cần ghi <code>storageClassName</code> → provisioner <strong>tự tạo PV</strong> on-demand (vd EKS: class <code>gp3</code> → tự tạo EBS volume).</p>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:14px;">
+      <div class="code-block"><span class="kw">kind:</span> PersistentVolumeClaim
+<span class="kw">spec:</span>
+  <span class="kw">accessModes:</span> [ReadWriteOnce]
+  <span class="kw">storageClassName:</span> gp3      <span class="cmt"># → provisioner tự dựng EBS</span>
+  <span class="kw">resources:</span> {<span class="kw">requests:</span> {<span class="kw">storage:</span> 10Gi}}</div>
+    </div>
+    <div class="card reveal" style="margin-top:12px; max-width:900px;">
+      <p style="font-size:0.85rem;"><strong>Trong lab:</strong> minikube/kind có sẵn StorageClass mặc định (hostpath/local) → tạo PVC là tự được cấp PV ngay, không cần admin làm gì.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>06 — Storage</span></div>
+</section>
+
+<!-- Slide: access modes + reclaim + StatefulSet tie-in -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">Hai thứ hay làm sai</div>
+      <h2>Access mode &amp; Reclaim policy</h2>
+    </div>
+    <div class="grid grid-2 reveal">
+      <div class="card">
+        <h3>Access modes</h3>
+        <ul class="bullets">
+          <li><strong>RWO</strong> (ReadWriteOnce): 1 node ghi — EBS là loại này</li>
+          <li><strong>ROX</strong> (ReadOnlyMany): nhiều node đọc</li>
+          <li><strong>RWX</strong> (ReadWriteMany): nhiều node cùng ghi — cần NFS/EFS</li>
+        </ul>
+        <p style="margin-top:8px;">🚩 Muốn nhiều Pod ghi chung mà xài EBS (RWO) → kẹt. Phải EFS/NFS.</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--brand-danger);">
+        <h3>Reclaim policy</h3>
+        <ul class="bullets">
+          <li><strong>Retain:</strong> xoá PVC → PV + data <em>còn</em> (an toàn)</li>
+          <li><strong>Delete:</strong> xoá PVC → xoá luôn volume thật</li>
+        </ul>
+        <p style="margin-top:8px;">🚩 Cloud default thường là <strong>Delete</strong> → xoá nhầm PVC là <strong>mất data</strong>. Production hay đặt Retain cho DB.</p>
+      </div>
+    </div>
+    <div class="card card-accent reveal" style="margin-top:14px; max-width:920px;">
+      <p style="font-size:0.88rem;"><span class="badge badge-accent">Khép vòng với §05</span> StatefulSet dùng <code>volumeClaimTemplates</code> → mỗi Pod (<code>db-0, db-1</code>) tự sinh một PVC riêng (<code>data-db-0</code>, <code>data-db-1</code>), <strong>dính theo danh tính Pod</strong> và giữ nguyên khi Pod restart/reschedule. Đó chính là cách chạy database trên K8s mà không mất dữ liệu.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>06 — Storage</span></div>
+</section>
+
+<!-- ========== SECTION 7: HANDS-ON LAB ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">07</div>
+  <div class="section-label">Hands-on Lab</div>
+  <h2>Gấp slide lại — <span class="gradient-text">mở terminal lên</span></h2>
+  <p class="lead">Từ giờ mỗi slide là một bước. Gõ theo, đợi output, rồi sang slide sau.</p>
+</section>
+
+<!-- Slide 16: LAB 0 - choose tool + install -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 0 · Cài đặt</span>
+      <h2>Chọn 1 công cụ — minikube hoặc kind</h2>
+      <p class="lead">Cả hai cho bạn 1 cụm K8s thật trên máy. Chọn 1, dùng xuyên suốt lab.</p>
+    </div>
+    <div class="two-col reveal">
+      <div class="card" style="border-top:3px solid var(--brand-accent);">
+        <h3>Phương án A — minikube</h3>
+        <div class="code-block" style="margin-top:8px;"><span class="cmt"># macOS</span>
+brew install minikube
+<span class="cmt"># Linux</span>
+curl -LO https://storage.googleapis.com/\
+minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 \
+  /usr/local/bin/minikube
+<span class="cmt"># Windows (choco)</span>
+choco install minikube</div>
+        <p style="margin-top:8px;font-size:0.8rem;">Có nhiều addon sẵn (dashboard, ingress, metrics-server).</p>
+      </div>
+      <div class="card" style="border-top:3px solid var(--brand-secondary);">
+        <h3>Phương án B — kind</h3>
+        <div class="code-block" style="margin-top:8px;"><span class="cmt"># macOS</span>
+brew install kind
+<span class="cmt"># Linux</span>
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/\
+latest/kind-linux-amd64
+chmod +x kind &amp;&amp; sudo mv kind /usr/local/bin/
+<span class="cmt"># Windows (choco)</span>
+choco install kind</div>
+        <p style="margin-top:8px;font-size:0.8rem;">Rất nhẹ &amp; nhanh, cụm = container Docker.</p>
+      </div>
+    </div>
+    <div class="checkpoint reveal" style="margin-top:14px;">👉 <strong>Điều kiện chung:</strong> cần <code>kubectl</code> (mac <code>brew install kubectl</code> · Linux qua curl · Windows <code>choco install kubernetes-cli</code>), <strong>Docker đang chạy</strong> (<code>docker ps</code> không lỗi), <code>kubectl version --client</code> in version. <strong>Windows:</strong> bật <strong>WSL2 + Docker Desktop</strong>. <em>Nếu cụm buổi sáng còn chạy → bỏ qua Lab 0–1, dùng tiếp.</em></div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 17: LAB 1 - start + verify -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 1 · Dựng cụm</span>
+      <h2>Khởi động cụm &amp; kiểm tra</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Gõ theo (chọn đúng công cụ của bạn)</div>
+        <div class="code-block"><span class="cmt"># minikube</span>
+minikube start
+
+<span class="cmt"># HOẶC kind</span>
+kind create cluster --name lab
+
+<span class="cmt"># Kiểm tra — dùng chung cho cả hai</span>
+kubectl get nodes
+kubectl cluster-info</div>
+      </div>
+      <div>
+        <div class="do-now">✅ Output mong đợi</div>
+        <div class="code-block"><span class="out">$ kubectl get nodes</span>
+<span class="out">NAME       STATUS   ROLES           AGE  VER</span>
+<span class="out">minikube   </span><span class="str">Ready</span><span class="out">    control-plane   30s  v1.30</span>
+
+<span class="out">$ kubectl cluster-info</span>
+<span class="out">Control plane is running at</span>
+<span class="out">https://127.0.0.1:xxxxx</span></div>
+        <div class="checkpoint" style="margin-top:12px;"><strong>Checkpoint:</strong> Node ở trạng thái <code>Ready</code> = cụm sống. Nếu <code>NotReady</code>, đợi ~30s rồi chạy lại <code>get nodes</code>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 18: LAB 2 - deploy + watch -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 2 · Deploy</span>
+      <h2>Deploy app 3 replica &amp; xem nó lên</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Gõ theo</div>
+        <div class="code-block">kubectl create deployment web \
+  --image=nginx:1.27 --replicas=3
+
+<span class="cmt"># Xem pod lên (Ctrl+C để thoát)</span>
+kubectl get pods -w
+
+<span class="cmt"># Nhìn cả phả hệ Deploy→RS→Pod</span>
+kubectl get deploy,rs,pods</div>
+      </div>
+      <div>
+        <div class="do-now">✅ Output mong đợi</div>
+        <div class="code-block"><span class="out">$ kubectl get pods</span>
+<span class="out">NAME          READY   STATUS</span>
+<span class="out">web-5d8c-aa   </span><span class="str">1/1</span><span class="out">     </span><span class="str">Running</span>
+<span class="out">web-5d8c-bb   </span><span class="str">1/1</span><span class="out">     </span><span class="str">Running</span>
+<span class="out">web-5d8c-cc   </span><span class="str">1/1</span><span class="out">     </span><span class="str">Running</span></div>
+        <div class="checkpoint" style="margin-top:12px;"><strong>Soi:</strong> 1 Deployment → 1 ReplicaSet → 3 Pod. Đúng phả hệ đã học ở Part 1. Pod name = <code>&lt;rs&gt;-&lt;hash&gt;</code>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 19: LAB 3 - expose + access -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 3 · Expose</span>
+      <h2>Tạo Service &amp; mở app trên browser</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Gõ theo</div>
+        <div class="code-block">kubectl expose deployment web \
+  --type=NodePort --port=80
+kubectl get svc web
+
+<span class="cmt"># minikube tự mở URL:</span>
+minikube service web --url
+
+<span class="cmt"># Cách CHUNG cho minikube &amp; kind:</span>
+kubectl port-forward svc/web 8080:80
+<span class="cmt"># → mở http://localhost:8080</span></div>
+      </div>
+      <div>
+        <div class="do-now">✅ Kết quả</div>
+        <div class="card"><p style="font-size:0.85rem;">Trang <strong>"Welcome to nginx!"</strong> hiện ra trên browser.</p></div>
+        <div class="checkpoint" style="margin-top:12px;"><strong>Hiểu cái vừa làm:</strong> Service (NodePort) đứng trước 3 Pod, dùng <em>selector</em> <code>app=web</code> để tìm chúng và load-balance. Bạn không gọi IP Pod nào cả.</div>
+        <div class="card card-accent" style="margin-top:12px;"><p style="font-size:0.82rem;"><strong>Lưu ý kind:</strong> NodePort của kind không tự lộ ra host → dùng <code>port-forward</code> (ở trên) là chắc ăn nhất cho lab.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 20: LAB 4 - scale + self-heal -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 4 · Scale &amp; Self-heal</span>
+      <h2>Scale lên 5, rồi "giết" 1 Pod</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Gõ theo</div>
+        <div class="code-block"><span class="cmt"># Scale 3 → 5</span>
+kubectl scale deploy/web --replicas=5
+kubectl get pods        <span class="cmt"># đếm: 5 pod</span>
+
+<span class="cmt"># Tự phục hồi: xoá 1 pod</span>
+kubectl delete pod \
+  $(kubectl get pod -l app=web \
+  -o name | head -1)
+
+kubectl get pods -w     <span class="cmt"># pod mới mọc lên</span></div>
+      </div>
+      <div>
+        <div class="do-now">✅ Quan sát</div>
+        <div class="card"><p style="font-size:0.85rem;">Pod bị xoá chuyển <code>Terminating</code>, gần như lập tức có 1 Pod mới <code>ContainerCreating</code> → <code>Running</code>. Tổng vẫn là <strong>5</strong>.</p></div>
+        <div class="checkpoint" style="margin-top:12px;"><strong>Control loop đang chạy trước mắt bạn:</strong> ReplicaSet thấy thực tế (4) ≠ mong muốn (5) → reconcile → tạo lại. Không ai bấm nút gì cả.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 21: LAB 5 - rollout + rollback -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 5 · Rollout &amp; Rollback</span>
+      <h2>Nâng version, rồi rollback</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Gõ theo</div>
+        <div class="code-block"><span class="cmt"># Đổi image → rolling update</span>
+kubectl set image deploy/web \
+  web=nginx:1.28
+kubectl rollout status deploy/web
+
+<span class="cmt"># Xem lịch sử revision</span>
+kubectl rollout history deploy/web
+
+<span class="cmt"># Quay lại version trước</span>
+kubectl rollout undo deploy/web</div>
+      </div>
+      <div>
+        <div class="do-now">✅ Quan sát</div>
+        <div class="code-block"><span class="out">$ kubectl rollout status deploy/web</span>
+<span class="out">Waiting for rollout: 3 of 5 updated</span>
+<span class="str">deployment "web" successfully</span>
+<span class="str">rolled out</span></div>
+        <div class="checkpoint" style="margin-top:12px;"><strong>Để ý:</strong> Pod cũ tắt dần, Pod mới lên dần — không downtime. <code>rollout undo</code> đưa về ReplicaSet cũ trong vài giây. Đây chính là Section 04 chạy thật.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- Slide 22: LAB 6 - break, debug, cleanup -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <span class="lab-tag">Lab 6 · Break → Debug → Dọn</span>
+      <h2>Cố tình làm hỏng, rồi tự chẩn đoán</h2>
+    </div>
+    <div class="two-col reveal">
+      <div>
+        <div class="do-now">👉 Làm hỏng &amp; điều tra</div>
+        <div class="code-block"><span class="cmt"># Deploy 1 image không tồn tại</span>
+kubectl set image deploy/web \
+  web=nginx:khong-co-tag
+
+kubectl get pods          <span class="cmt"># thấy gì?</span>
+kubectl describe pod &lt;pod&gt; <span class="cmt"># đọc Events</span>
+
+<span class="cmt"># Cứu: rollback</span>
+kubectl rollout undo deploy/web</div>
+      </div>
+      <div>
+        <div class="do-now">✅ Triệu chứng &amp; dọn dẹp</div>
+        <div class="card"><p style="font-size:0.84rem;">STATUS = <code>ImagePullBackOff</code>. Phần <strong>Events</strong> của <code>describe</code> ghi rõ "Failed to pull image" → đúng quy trình <strong>get → describe → logs</strong>.</p></div>
+        <div class="do-now" style="margin-top:12px;">🧹 Dọn cụm khi xong</div>
+        <div class="code-block">kubectl delete deploy/web svc/web
+minikube delete          <span class="cmt"># nếu minikube</span>
+kind delete cluster --name lab <span class="cmt"># nếu kind</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer"><span>07 — Hands-on Lab</span></div>
+</section>
+
+<!-- ========== SECTION 8: THE CHALLENGE ========== -->
+<section class="slide slide-divider">
+  <div class="section-number">08</div>
+  <div class="section-label">The Challenge</div>
+  <h2>Đến lượt <span class="gradient-text">bạn</span></h2>
+  <p class="lead">Đây là đề bài — lời giải do bạn thiết kế và tự tìm</p>
+</section>
+
+<!-- Slide 24: challenge problem statement -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">★ Đề bài</div>
+      <h2>K8s on AWS — Terraform 1-Click</h2>
+    </div>
+    <div class="card card-dark reveal" style="margin-bottom:14px;">
+      <h3 style="color:var(--brand-accent)">Yêu cầu</h3>
+      <p style="color:#e2e8f0; font-size:1rem; line-height:1.7;">Dựng <strong>1 con EC2</strong>, bật <strong>minikube hoặc kind</strong> trong đó, deploy <strong>một app đơn giản, nhỏ nhẹ</strong>, <strong>expose ra ALB</strong>. Toàn bộ phải là <strong>1-click automation từ Terraform</strong>: bắt nó tự dựng hạ tầng, và <strong>biết wire một provider khác vào</strong>.</p>
+    </div>
+    <div class="card card-accent reveal" style="max-width:920px;">
+      <p style="font-size:0.9rem;"><strong>Lưu ý:</strong> Đây <em>chỉ là đề bài</em>. Cách giải — kiến trúc, công cụ, cách wire provider, cách nối K8s với ALB — là phần <strong>các bạn tự nghiên cứu và đề xuất</strong>. Kỹ năng minikube/kind vừa thực hành ở Lab là điểm khởi đầu của bạn. Không có lời giải mẫu.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>08 — The Challenge</span></div>
+</section>
+
+<!-- Slide 25: scope & constraints -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">★ Đề bài</div>
+      <h2>Phạm vi &amp; ràng buộc</h2>
+    </div>
+    <div class="grid grid-2 reveal">
+      <div class="card"><h3>Bắt buộc</h3>
+        <ul class="bullets">
+          <li>Hạ tầng (EC2 + những gì cần) dựng bằng <strong>Terraform</strong></li>
+          <li>Cụm K8s chạy bằng <strong>minikube hoặc kind</strong> trên EC2</li>
+          <li>App chạy <strong>trong K8s</strong> (không cài thẳng lên EC2)</li>
+          <li>App truy cập được từ <strong>Internet qua ALB</strong></li>
+          <li><strong>Một lệnh</strong> để dựng tất cả (1-click)</li>
+          <li>Có dùng <strong>≥2 provider</strong> Terraform (wire provider khác)</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Tự do quyết định</h3>
+        <ul class="bullets">
+          <li>App nào (miễn nhỏ nhẹ), ngôn ngữ gì</li>
+          <li>minikube hay kind, driver nào</li>
+          <li>Provider thứ hai là gì, wire kiểu nào</li>
+          <li>Cách app được đưa vào cụm</li>
+          <li>Network/VPC: tự dựng hay dùng default</li>
+          <li>Cấu trúc thư mục, biến, module</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card card-accent reveal" style="margin-top:12px; max-width:920px;">
+      <p style="font-size:0.85rem;"><strong>Cần tự tìm hiểu (gợi ý hướng nghiên cứu, không phải lời giải):</strong> chạy K8s trên 1 EC2 thế nào để network lộ ra host · ALB nối tới một app trong cụm bằng cách nào · Terraform điều phối nhiều provider trong một apply ra sao · thứ tự dựng &amp; phụ thuộc giữa hạ tầng và app.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>08 — The Challenge</span></div>
+</section>
+
+<!-- Slide 26: deliverables & acceptance -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="slide-header">
+      <div class="eyebrow">★ Đề bài</div>
+      <h2>Nộp gì &amp; thế nào là đạt</h2>
+    </div>
+    <div class="two-col reveal">
+      <div class="card"><h3>Deliverables</h3>
+        <ul class="bullets">
+          <li>Repo Terraform (code đầy đủ)</li>
+          <li><code>README.md</code>: lệnh chạy + sơ đồ kiến trúc + giải thích cách wire provider</li>
+          <li>Bằng chứng: URL ALB mở được app trên browser (ảnh/clip)</li>
+          <li>Dọn được sạch (destroy) sau khi xong</li>
+        </ul>
+      </div>
+      <div class="card card-accent"><h3>Đạt khi (acceptance)</h3>
+        <ul class="bullets">
+          <li><strong>1 lệnh</strong> từ repo sạch → app chạy, URL ALB trả về trang app ✔</li>
+          <li>App thực sự chạy <strong>trong K8s</strong>, không phải cài thẳng EC2 ✔</li>
+          <li>Có <strong>≥2 provider</strong> được wire trong cùng cấu hình ✔</li>
+          <li>Giải thích được <strong>vì sao</strong> chọn cách làm đó ✔</li>
+          <li>Dựng lại từ đầu cho kết quả như nhau (reproducible) ✔</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card card-dark reveal" style="margin-top:12px; max-width:920px; margin-left:auto;margin-right:auto;">
+      <p style="color:#cbd5e1; font-size:0.86rem;"><strong style="color:var(--brand-accent)">Cách chấm:</strong> trainer chạy thử bằng đúng lệnh trong README của bạn, đối chiếu với acceptance ở trên, và hỏi bạn giải thích thiết kế. Nhớ <code style="color:#fbbf24;background:rgba(0,0,0,0.3)">destroy</code> sau khi xong để khỏi tốn tiền hạ tầng.</p>
+    </div>
+  </div>
+  <div class="slide-footer"><span>08 — The Challenge</span></div>
+</section>
+
+<!-- Slide 27: closing -->
+<section class="slide slide-closing">
+  <div class="eyebrow">Hết Kubernetes Day</div>
+  <h2>Giờ là lúc <span class="gradient-text">tự tay làm</span></h2>
+  <p class="lead" style="max-width:680px;">Bạn vừa tự deploy, expose, scale, rollout &amp; debug một app trên cụm thật. Phần còn lại — đưa nó lên AWS bằng Terraform 1-click — là sân chơi của bạn.</p>
+  <div class="refs" style="margin-top:24px; max-width:820px;">Tài liệu nền (Kubernetes): <a href="https://kubernetes.io/docs/concepts/services-networking/service/">Service</a> &middot; <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">Ingress</a> &middot; <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/">Probes</a> &middot; <a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/">HPA</a> &middot; <a href="https://minikube.sigs.k8s.io/docs/start/">minikube start</a> &middot; <a href="https://kind.sigs.k8s.io/docs/user/quick-start/">kind quick start</a></div>
+</section>
+
+<script>
+class SlidePresentation {
+  constructor() {
+    this.slides = document.querySelectorAll('.slide');
+    this.dots = document.getElementById('navDots');
+    this.counter = document.getElementById('counter');
+    this.progress = document.getElementById('progress');
+    this.total = this.slides.length;
+    this.currentIndex = 0;
+    this.wheelTimeout = null;
+    this.init();
+  }
+  init() { this.createDots(); this.observeSlides(); this.observeReveals(); this.bindKeys(); this.bindWheel(); this.bindTouch(); this.update(0); }
+  createDots() {
+    this.slides.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'nav-dot';
+      dot.addEventListener('click', () => this.slides[i].scrollIntoView({ behavior: 'smooth' }));
+      this.dots.appendChild(dot);
+    });
+    this.dotEls = this.dots.querySelectorAll('.nav-dot');
+  }
+  observeSlides() {
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting && e.intersectionRatio > 0.5) { const idx = [...this.slides].indexOf(e.target); if (idx >= 0) this.update(idx); } });
+    }, { threshold: 0.5 });
+    this.slides.forEach(s => obs.observe(s));
+  }
+  observeReveals() {
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { if (e.target.classList.contains('stagger')) { [...e.target.children].forEach((ch, i) => setTimeout(() => ch.classList.add('visible'), i * 100)); } else { e.target.classList.add('visible'); } } });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.reveal, .stagger').forEach(el => obs.observe(el));
+  }
+  update(idx) {
+    this.currentIndex = idx;
+    this.dotEls.forEach((d, i) => d.classList.toggle('active', i === idx));
+    const num = String(idx + 1).padStart(2, '0');
+    this.counter.innerHTML = `<strong>${num}</strong> / ${this.total}`;
+    this.progress.style.width = `${((idx + 1) / this.total) * 100}%`;
+  }
+  go(dir) { const next = Math.max(0, Math.min(this.total - 1, this.currentIndex + dir)); this.slides[next].scrollIntoView({ behavior: 'smooth' }); }
+  bindKeys() {
+    document.addEventListener('keydown', e => {
+      if (['ArrowDown','ArrowRight','Space','PageDown'].includes(e.code)) { e.preventDefault(); this.go(1); }
+      if (['ArrowUp','ArrowLeft','PageUp'].includes(e.code)) { e.preventDefault(); this.go(-1); }
+      if (e.code === 'Home') { e.preventDefault(); this.slides[0].scrollIntoView({ behavior: 'smooth' }); }
+      if (e.code === 'End') { e.preventDefault(); this.slides[this.total-1].scrollIntoView({ behavior: 'smooth' }); }
+    });
+  }
+  bindWheel() {
+    document.addEventListener('wheel', e => { if (this.wheelTimeout) return; this.wheelTimeout = setTimeout(() => this.wheelTimeout = null, 600); this.go(e.deltaY > 0 ? 1 : -1); }, { passive: true });
+  }
+  bindTouch() {
+    let startY = 0;
+    document.addEventListener('touchstart', e => startY = e.touches[0].clientY);
+    document.addEventListener('touchend', e => { const diff = startY - e.changedTouches[0].clientY; if (Math.abs(diff) > 60) this.go(diff > 0 ? 1 : -1); });
+  }
+}
+document.addEventListener('DOMContentLoaded', () => new SlidePresentation());
+</script>
+</body>
+</html>

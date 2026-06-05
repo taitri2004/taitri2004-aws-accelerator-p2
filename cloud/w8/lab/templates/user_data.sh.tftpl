@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euxo pipefail
+exec > /var/log/lab-bootstrap.log 2>&1
+
+export HOME=/root
+export KUBECONFIG=/root/.kube/config
+mkdir -p /root/.kube
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y docker.io curl
+systemctl enable --now docker
+
+snap install amazon-ssm-agent --classic 2>/dev/null || true
+systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service 2>/dev/null || systemctl enable --now amazon-ssm-agent 2>/dev/null || true
+
+KVER="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
+curl -Lo /usr/local/bin/kubectl "https://dl.k8s.io/release/$${KVER}/bin/linux/amd64/kubectl"
+chmod +x /usr/local/bin/kubectl
+
+curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+chmod +x /usr/local/bin/kind
+
+cat > /root/kind-config.yaml <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: ${node_port}
+    hostPort: ${node_port}
+    listenAddress: "0.0.0.0"
+    protocol: TCP
+EOF
+
+kind create cluster --name lab --config /root/kind-config.yaml
+kind get kubeconfig --name lab > /root/.kube/config
+
+echo "${app_manifest_b64}" | base64 -d > /root/app.yaml
+kubectl apply -f /root/app.yaml
+kubectl rollout status deployment/web --timeout=180s
+
+echo "BOOTSTRAP_DONE"

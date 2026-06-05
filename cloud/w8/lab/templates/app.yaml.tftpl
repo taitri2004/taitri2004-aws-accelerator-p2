@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head><meta charset="utf-8"><title>${app_name}</title></head>
+    <body style="font-family:sans-serif;text-align:center;padding-top:60px;background:#0f172a;color:#e2e8f0;">
+      <h1>${app_name}</h1>
+      <p>HTML page served by nginx inside Kubernetes kind on EC2.</p>
+      <p>Traffic path: AWS ALB -> EC2 NodePort -> Kubernetes Service -> nginx Pod.</p>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels: { app: web }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: web }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: html
+          configMap:
+            name: web-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: NodePort
+  selector: { app: web }
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: ${node_port}
