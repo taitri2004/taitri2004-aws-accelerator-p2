@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>K8s on AWS — Terraform 1-Click · W8 Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020; --ink:#e8eefc; --muted:#9fb0cd; --dim:#6b7ea0;
+  --cyan:#67e8f9; --indigo:#a5b4fc; --pink:#f0abfc; --green:#34d399; --amber:#fbbf24; --red:#fb7185;
+  --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);background:var(--bg);overflow-x:hidden}
+.slide{min-height:100vh;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;padding:clamp(28px,5vh,72px) clamp(22px,6vw,120px);position:relative;
+  background:linear-gradient(-45deg,#0b1020,#13224a,#0e3b46,#2a1d52);background-size:400% 400%;animation:bg 24s ease infinite}
+@keyframes bg{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+.wrap{width:100%;max-width:1040px;animation:rise .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px}
+h1{font-size:clamp(2.1rem,5.5vw,4rem);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:14px}
+h2{font-size:clamp(1.5rem,3.4vw,2.4rem);font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.grad{background:linear-gradient(90deg,var(--indigo),var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:clamp(1rem,1.7vw,1.25rem);color:var(--muted);max-width:760px;line-height:1.6}
+.sub{color:var(--muted);font-size:.95rem;margin-top:4px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.chip{padding:8px 16px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:.85rem;color:var(--muted)}
+.chip b{color:var(--ink)}
+.grid{display:grid;gap:14px;margin-top:22px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;backdrop-filter:blur(8px)}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card p,.card li{font-size:.9rem;color:var(--muted);line-height:1.55}
+.card.accent{border-color:rgba(103,232,249,.4);background:linear-gradient(135deg,rgba(103,232,249,.10),rgba(165,180,252,.05))}
+.card.good{border-color:rgba(52,211,153,.4)}.card.warn{border-color:rgba(251,191,36,.4)}.card.bad{border-color:rgba(251,113,133,.4)}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.03em}
+.t-c{background:rgba(103,232,249,.16);color:var(--cyan)}.t-g{background:rgba(52,211,153,.16);color:var(--green)}
+.t-a{background:rgba(251,191,36,.16);color:var(--amber)}.t-r{background:rgba(251,113,133,.16);color:var(--red)}
+ul.b{list-style:none}ul.b li{padding:7px 0 7px 22px;position:relative;border-bottom:1px solid var(--line)}
+ul.b li:last-child{border-bottom:none}ul.b li::before{content:'';position:absolute;left:0;top:14px;width:7px;height:7px;border-radius:50%;background:var(--cyan)}
+.mono{font-family:'JetBrains Mono',monospace}
+.code{background:#070b18;border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-family:'JetBrains Mono',monospace;
+  font-size:clamp(.72rem,.95vw,.86rem);line-height:1.7;color:#cdd9f5;overflow-x:auto;white-space:pre;margin-top:8px}
+.code .c{color:#64748b}.code .k{color:var(--amber)}.code .s{color:var(--green)}.code .f{color:var(--cyan)}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.82rem;font-weight:600}
+.arr{color:var(--cyan);font-weight:700}
+.big{font-family:'JetBrains Mono',monospace;font-size:clamp(2rem,4vw,3rem);font-weight:700;color:var(--cyan);line-height:1}
+.note{margin-top:18px;padding:12px 16px;border-radius:12px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);font-size:.86rem;color:var(--muted)}
+.note b{color:var(--green)}
+.divider{text-align:center}
+.snum{font-family:'JetBrains Mono',monospace;font-size:clamp(4.5rem,12vw,9rem);font-weight:700;
+  -webkit-text-stroke:2px rgba(103,232,249,.25);color:transparent;line-height:1}
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--indigo));z-index:50;width:0;transition:width .25s}
+.dots{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(159,176,205,.35);border:none;cursor:pointer;transition:.25s;padding:0}
+.dot.on{background:var(--cyan);transform:scale(1.5)}
+.count{position:fixed;bottom:16px;right:20px;z-index:50;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--dim)}
+.count b{color:var(--ink)}
+.foot{position:absolute;bottom:18px;left:clamp(22px,6vw,120px);font-size:.7rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.podbox{margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.35)}
+.podbox .name{font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--green);font-weight:700;margin-top:6px}
+.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.meta-row div{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.meta-row span{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:4px}
+.meta-row code{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink)}
+.reload{margin-top:14px;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;font-weight:700;color:#0b1020;background:linear-gradient(90deg,var(--cyan),var(--indigo))}
+@media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}.dots{display:none}.flow{flex-direction:column}.arr{transform:rotate(90deg)}}
+</style>
+</head>
+<body>
+<div class="progress" id="pg"></div>
+<nav class="dots" id="dots"></nav>
+<div class="count" id="ct"><b>01</b> / 11</div>
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="wrap" style="text-align:center">
+    <div class="eyebrow">W8 Lab · Cloud/DevOps Accelerator</div>
+    <h1>Kubernetes on AWS<br><span class="grad">Terraform 1-Click</span></h1>
+    <p class="lead" style="margin:0 auto">Dựng 1 EC2 → chạy kind → deploy app → expose ra ALB — tất cả bằng <b style="color:#e8eefc">một lệnh <span class="mono">terraform apply</span></b>.</p>
+    <div class="chips" style="justify-content:center">
+      <div class="chip"><b>Stack</b> Terraform · AWS · kind · K8s</div>
+      <div class="chip"><b>Providers</b> aws + random</div>
+      <div class="chip"><b>Access</b> SSM (no SSH)</div>
+    </div>
+    <div class="sub" style="margin-top:26px">taitri2004 · aws-accelerator-p2</div>
+  </div>
+  <div class="foot">↓ scroll · → phím mũi tên</div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Đề bài</div>
+    <h2>Yêu cầu của challenge</h2>
+    <div class="grid g2">
+      <div class="card accent">
+        <h3>🎯 Bắt buộc</h3>
+        <ul class="b">
+          <li>Hạ tầng dựng bằng <b>Terraform</b></li>
+          <li>K8s chạy bằng <b>kind</b> trên EC2</li>
+          <li>App chạy <b>trong K8s</b> (không cài thẳng EC2)</li>
+          <li>Truy cập từ Internet qua <b>ALB</b></li>
+          <li><b>1 lệnh</b> dựng tất cả (1-click)</li>
+          <li>Dùng <b>≥2 provider</b> Terraform</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>📦 Kết quả nộp</h3>
+        <ul class="b">
+          <li>Terraform code trong <span class="mono">cloud/w8/lab</span></li>
+          <li>README hướng dẫn run / cleanup</li>
+          <li>Evidence pack và screenshots</li>
+          <li>Demo app truy cập qua ALB</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Đề bài</div>
+</section>
+
+<!-- 3 SECTION divider -->
+<section class="slide divider">
+  <div class="wrap">
+    <div class="snum">01</div>
+    <div class="eyebrow" style="margin-top:8px">Architecture</div>
+    <h2>Một <span class="grad">terraform apply</span> dựng ra gì?</h2>
+  </div>
+</section>
+
+<!-- 4 ARCHITECTURE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Kiến trúc</div>
+    <h2>Luồng traffic end-to-end</h2>
+    <div class="code"><span class="c"># AWS Region ap-southeast-1 · VPC 10.0.0.0/16 · 2 public subnet / 2 AZ</span>
+
+   Internet
+      <span class="k">│</span>  http://&lt;alb-dns&gt;
+      <span class="k">▼</span>
+   <span class="f">ALB :80</span>  (Application LB, 2 AZ)         <span class="c">← cửa duy nhất ra Internet</span>
+      <span class="k">│</span> forward → Target Group (instance : 30080)
+      <span class="k">▼</span>
+   <span class="f">EC2</span> Ubuntu 22.04  (IAM role + SSM Agent + Docker)
+      <span class="k">│</span>  kind cluster — extraPortMappings 30080→host
+      <span class="k">▼</span>
+   <span class="f">Service</span> (NodePort 30080) → <span class="f">Deployment</span> web ×3 (nginx)</div>
+    <div class="flow">
+      <div class="step">Browser</div><div class="arr">→</div>
+      <div class="step">ALB:80</div><div class="arr">→</div>
+      <div class="step">EC2:30080</div><div class="arr">→</div>
+      <div class="step">kind NodePort</div><div class="arr">→</div>
+      <div class="step">Service</div><div class="arr">→</div>
+      <div class="step">Pod nginx</div>
+    </div>
+  </div>
+  <div class="foot">01 — Architecture</div>
+</section>
+
+<!-- 5 1-CLICK FLOW -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">1-Click</div>
+    <h2>Điều gì xảy ra khi <span class="mono">terraform apply</span></h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3><span class="tag t-c">aws</span> Provision hạ tầng</h3>
+        <ul class="b">
+          <li>VPC · 2 subnet · IGW · route</li>
+          <li>2 Security Group (ALB, EC2)</li>
+          <li>IAM role + instance profile (SSM)</li>
+          <li>EC2 + ALB + Target Group + Listener</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>⚙️ EC2 <span class="mono">user_data</span> tự bootstrap</h3>
+        <ul class="b">
+          <li>Cài docker + kubectl + kind</li>
+          <li>Tạo cụm kind (map NodePort ra host)</li>
+          <li><span class="mono">kubectl apply</span> app (Deployment + Service)</li>
+          <li>App sẵn sàng sau ~3–5 phút</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot">01 — Architecture</div>
+</section>
+
+<!-- 6 PROVIDER WIRING -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">≥2 Provider · quyết định thiết kế</div>
+    <h2>Vì sao provider thứ 2 là <span class="grad">random</span>?</h2>
+    <div class="grid g2" style="margin-bottom:6px">
+      <div class="card good"><h3>Provider 1: aws</h3><p>Tạo VPC, subnet, security group, IAM, EC2, ALB, target group và listener.</p></div>
+      <div class="card accent"><h3>Provider 2: random</h3><p>Tạo suffix unique để tên ALB, target group và IAM role không bị trùng khi apply lại hoặc chạy song song.</p></div>
+    </div>
+    <div class="code"><span class="k">resource</span> <span class="s">"random_id" "suffix"</span> { byte_length = <span class="s">4</span> }
+<span class="k">resource</span> <span class="s">"aws_lb" "this"</span> { name = <span class="s">"${var.name}-alb-${random_id.suffix.hex}"</span> }
+<span class="c"># output của random → input của aws: 2 provider chung 1 dependency graph</span></div>
+  </div>
+  <div class="foot">Design decision</div>
+</section>
+
+<!-- 7 SECURITY -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Bảo mật</div>
+    <h2>SSM Session Manager — <span class="grad">không SSH, không port 22</span></h2>
+    <div class="grid g2">
+      <div class="card bad"><h3>❌ SSH truyền thống</h3>
+        <ul class="b"><li>Mở port 22 ra Internet → attack surface</li><li>IP đổi liên tục phải sửa SG</li><li>Phải quản SSH key</li></ul>
+      </div>
+      <div class="card good"><h3>✅ SSM Session Manager</h3>
+        <ul class="b"><li>EC2 chỉ cần <b>outbound 443</b> + IAM role</li><li><b>KHÔNG mở inbound port nào</b></li><li>Vào máy qua IAM, audit qua CloudTrail</li></ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Design decision</div>
+</section>
+
+<!-- 8 LOAD BALANCE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Demo nổi bật</div>
+    <h2>Chứng minh <span class="grad">load-balancing</span> ngay trên trang</h2>
+    <div class="grid g2">
+      <div class="card accent"><h3>🧬 Trang hiện Pod name</h3>
+        <p>Pod hiện tại được render bằng Downward API trong initContainer.</p>
+        <div class="podbox">
+          <div>Served by Pod</div>
+          <div class="name">__POD_NAME__</div>
+          <div class="meta-row">
+            <div><span>Pod IP</span><code>__POD_IP__</code></div>
+            <div><span>Node</span><code>__NODE__</code></div>
+          </div>
+          <button class="reload" onclick="reloadCurrentSlide()">Reload through ALB</button>
+        </div>
+      </div>
+      <div class="card good"><h3>✅ Cách đọc kết quả</h3>
+        <p>ALB forward vào EC2 NodePort; Kubernetes Service chọn pod có label <span class="mono">app=web</span>.</p>
+        <p style="margin-top:8px">Pod name thay đổi khi reload chứng minh traffic được phân phối bên trong Kubernetes.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot">Demo</div>
+</section>
+
+<!-- 10 DECISIONS -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Quyết định thiết kế</div>
+    <h2>Chọn gì & vì sao</h2>
+    <div class="grid g2">
+      <div class="card"><h3>kind &gt; minikube</h3><p><span class="mono">extraPortMappings</span> map NodePort ra host, phù hợp luồng ALB → EC2:30080.</p></div>
+      <div class="card"><h3>App qua user_data</h3><p>Bootstrap EC2, tạo kind cluster và apply manifest trong cùng một lần apply.</p></div>
+      <div class="card"><h3>Custom VPC</h3><p>2 public subnet / 2 AZ, IGW và route table để kiểm soát network rõ ràng.</p></div>
+      <div class="card"><h3>SSM + random</h3><p>SSM thay SSH; random tạo suffix unique cho các resource cần tên riêng.</p></div>
+    </div>
+  </div>
+  <div class="foot">02 — Decisions</div>
+</section>
+
+<!-- 12 EVIDENCE -->
+<section class="slide">
+  <div class="wrap">
+    <div class="eyebrow">Acceptance · đã verify</div>
+    <h2>Bằng chứng đạt yêu cầu</h2>
+    <div class="grid g2">
+      <div class="card good"><h3>✓ 1-click</h3><p>1 lệnh từ repo sạch → 18 resource → app chạy.</p></div>
+      <div class="card good"><h3>✓ App trong K8s</h3><p>kubectl (qua SSM) thấy 3 pod Running + Service NodePort.</p></div>
+      <div class="card good"><h3>✓ ≥2 provider</h3><p>aws + random wire trong cùng config.</p></div>
+      <div class="card good"><h3>✓ Truy cập qua ALB</h3><p>HTTP 200, trang app + load-balance.</p></div>
+      <div class="card good"><h3>✓ Bảo mật</h3><p>Không SSH/22; vào máy qua SSM.</p></div>
+      <div class="card good"><h3>✓ Reproducible</h3><p>destroy → apply lại kết quả như nhau. Dọn sạch $0.</p></div>
+    </div>
+  </div>
+  <div class="foot">02 — Decisions</div>
+</section>
+
+<!-- 14 CLOSING -->
+<section class="slide divider">
+  <div class="wrap">
+    <div class="eyebrow">Cảm ơn</div>
+    <h1>Một lệnh.<br><span class="grad">Cả hệ thống.</span></h1>
+    <p class="lead" style="margin:10px auto 0">Terraform provision · kind orchestrate · ALB expose · SSM secure · random unique · tự test &amp; dọn sạch.</p>
+    <div class="chips" style="justify-content:center">
+      <div class="chip"><b>Repo</b> cloud/w8/lab</div>
+      <div class="chip"><b>Run</b> terraform apply -auto-approve</div>
+      <div class="chip"><b>Q&amp;A</b> ?</div>
+    </div>
+  </div>
+  <div class="foot">Hết · W8 Lab</div>
+</section>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')],dots=document.getElementById('dots'),
+  ct=document.getElementById('ct'),pg=document.getElementById('pg');let cur=0;
+slides.forEach((s,i)=>{s.id=s.id||'slide-'+(i+1)});
+slides.forEach((_,i)=>{const b=document.createElement('button');b.className='dot';
+  b.onclick=()=>goTo(i,true);dots.appendChild(b)});
+const dEls=[...dots.children];
+function upd(i){cur=i;dEls.forEach((d,j)=>d.classList.toggle('on',j===i));
+  ct.innerHTML='<b>'+String(i+1).padStart(2,'0')+'</b> / '+slides.length;
+  pg.style.width=((i+1)/slides.length*100)+'%';
+  if(location.hash!=='#'+slides[i].id) history.replaceState(null,'','#'+slides[i].id)}
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>.5){
+  const i=slides.indexOf(e.target);if(i>=0)upd(i)}}),{threshold:.5});
+slides.forEach(s=>io.observe(s));
+function goTo(i,smooth=false){slides[i].scrollIntoView({behavior:smooth?'smooth':'auto'})}
+function go(d){const n=Math.max(0,Math.min(slides.length-1,cur+d));goTo(n,true)}
+function reloadCurrentSlide(){history.replaceState(null,'','#'+slides[cur].id);location.reload()}
+addEventListener('keydown',e=>{
+  if(['ArrowDown','ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(1)}
+  if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(-1)}
+  if(e.key==='Home'){e.preventDefault();goTo(0,true)}
+  if(e.key==='End'){e.preventDefault();goTo(slides.length-1,true)}});
+const start=Math.max(0,slides.findIndex(s=>location.hash==='#'+s.id));
+goTo(start,false);
+upd(start);
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # W8 Lab - K8s on AWS, Terraform 1-Click
 
-> Challenge: create one EC2 instance, run kind inside it, deploy a small HTML app,
+> Challenge: create one EC2 instance, run kind inside it, deploy a small HTML demo app,
 > expose the app through an AWS ALB, and build everything with one Terraform apply.
 
 ## Architecture
@@ -71,7 +71,7 @@ terraform apply -auto-approve
 terraform output alb_url
 ```
 
-After apply, wait about 3-5 minutes for EC2 bootstrap and ALB health checks. Then open `alb_url` in a browser.
+After apply, wait about 3-5 minutes for EC2 bootstrap and ALB health checks. Then open `alb_url` in a browser to view the presentation/demo page.
 
 ## Cleanup
 

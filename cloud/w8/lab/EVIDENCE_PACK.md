@@ -52,7 +52,7 @@ Open:
 terraform output -raw alb_url
 ```
 
-Expected result: browser shows the `w8-lab` HTML page.
+Expected result: browser shows the W8 Lab presentation/demo page through the ALB URL.
 
 ![App through ALB](screenshots/app-alb.png)
 
