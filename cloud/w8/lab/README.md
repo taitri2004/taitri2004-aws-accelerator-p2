@@ -6,15 +6,27 @@
 ## Architecture
 
 ```text
-Internet
-  -> ALB :80
-     -> Target Group: instance port 30080
-        -> EC2 Ubuntu 22.04
-           -> IAM role + SSM Agent for admin access
-           -> Docker
-              -> kind single-node Kubernetes cluster
-                 -> Service web NodePort 30080
-                    -> Deployment web, 2 nginx replicas
+                           AWS Region: ap-southeast-1
+
+        +----------------------------- VPC 10.0.0.0/16 -----------------------------+
+        |                                                                            |
+Internet|  Public Subnet A                         Public Subnet B                   |
+   |    |  +----------------------+                +----------------------+          |
+   +------> Application Load      |                | ALB second subnet    |          |
+        |  | Balancer :80         |                | attachment           |          |
+        |  +----------+-----------+                +----------------------+          |
+        |             |                                                              |
+        |             v                                                              |
+        |  +----------------------+                                                  |
+        |  | EC2 Ubuntu 22.04     |                                                  |
+        |  | - SSM Agent          |                                                  |
+        |  | - Docker             |                                                  |
+        |  | - kind cluster       |                                                  |
+        |  |   Service NodePort   |                                                  |
+        |  |   Deployment nginx   |                                                  |
+        |  +----------------------+                                                  |
+        |                                                                            |
+        +----------------------------------------------------------------------------+
 ```
 
 Network:
@@ -51,8 +63,6 @@ resource "aws_lb" "this" {
 }
 ```
 
-`random_id.suffix.hex` feeds into `aws_lb`, `aws_lb_target_group`, `aws_iam_role` and `aws_iam_instance_profile` names, so the two providers share one dependency graph in a single apply.
-
 ## Run
 
 ```bash
@@ -63,36 +73,8 @@ terraform output alb_url
 
 After apply, wait about 3-5 minutes for EC2 bootstrap and ALB health checks. Then open `alb_url` in a browser.
 
-## SSM Access
-
-The EC2 instance does not expose port 22. Use SSM Session Manager:
-
-```bash
-aws ssm start-session --target $(terraform output -raw instance_id) --region ap-southeast-1
-```
-
-To verify the app is running inside Kubernetes:
-
-```bash
-aws ssm send-command \
-  --instance-ids $(terraform output -raw instance_id) \
-  --document-name AWS-RunShellScript \
-  --parameters 'commands=["KUBECONFIG=/root/.kube/config kubectl get pods,svc -o wide"]'
-```
-
 ## Cleanup
 
 ```bash
 terraform destroy -auto-approve
 ```
-
-EC2 and ALB are billed while running, so destroy the lab after collecting evidence.
-
-## Acceptance Map
-
-- [x] One Terraform apply creates the infrastructure and deploys the app
-- [x] The app runs inside Kubernetes kind, not directly on EC2
-- [x] The app is reachable from the Internet through ALB
-- [x] Two Terraform providers are wired in the same configuration: `aws` and `random`
-- [x] EC2 does not expose SSH; admin access uses SSM
-- [x] Destroy removes the lab resources
