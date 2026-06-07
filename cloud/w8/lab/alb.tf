@@ -4,7 +4,7 @@ resource "aws_lb" "this" {
   name               = "${var.name}-alb-${random_id.suffix.hex}"
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id # 2 AZ
+  subnets            = aws_subnet.public[*].id
   tags               = { Name = "${var.name}-alb" }
 }
 
