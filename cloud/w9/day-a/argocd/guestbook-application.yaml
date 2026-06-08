@@ -1,0 +1,26 @@
+# Application mẫu — guestbook (repo chính thức của Argo)
+# Dùng làm "hello world" GitOps: 1 Application → ArgoCD pull từ Git → apply vào cluster.
+# Sau đó demo rollback bằng cách edit trong cluster → selfHeal revert ngay.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/argoproj/argocd-example-apps.git
+    targetRevision: HEAD
+    path: guestbook
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: guestbook
+  syncPolicy:
+    automated:
+      prune: true       # xoá resource khi Git xoá
+      selfHeal: true    # revert mọi sửa tay trong cluster
+    syncOptions:
+      - CreateNamespace=true

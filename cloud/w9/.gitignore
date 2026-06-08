@@ -1,0 +1,12 @@
+NOTES.md
+**/NOTES.md
+
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.pem
+
+.DS_Store
+*.local

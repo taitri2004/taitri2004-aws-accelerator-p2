@@ -1,0 +1,25 @@
+# Application trỏ vào chính repo này, folder manifests/nginx-demo/.
+# ArgoCD sẽ pull mỗi lần repo update → cluster reconcile.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-demo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/taitri2004/taitri2004-aws-accelerator-p2.git
+    targetRevision: main
+    path: cloud/w9/day-a/argocd/manifests/nginx-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: w9-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
