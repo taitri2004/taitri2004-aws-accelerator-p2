@@ -1,5 +1,5 @@
-# Application trỏ vào chính repo này, folder manifests/nginx-demo/.
-# ArgoCD sẽ pull mỗi lần repo update → cluster reconcile.
+# Application trỏ tới chính repo này, folder manifests/nginx-demo/.
+# ArgoCD pull manifest mỗi lần repo cập nhật, cluster reconcile theo.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application

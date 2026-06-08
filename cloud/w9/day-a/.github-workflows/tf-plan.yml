@@ -1,6 +1,6 @@
-# Terraform plan-on-PR cho cloud/w8/exercise
-# Trigger: PR mở/sửa file dưới cloud/w8/exercise/
-# Output: comment plan vào PR cho reviewer xem trước khi merge.
+# Terraform plan-on-PR cho cloud/w8/exercise.
+# Trigger khi PR mở hoặc sửa file dưới cloud/w8/exercise/.
+# Output: plan kết quả được comment lên PR cho reviewer.
 
 name: Terraform Plan (w8 exercise)
 
@@ -12,8 +12,8 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write   # cần để comment plan
-  id-token: write        # cần cho OIDC → AWS
+  pull-requests: write
+  id-token: write
 
 env:
   AWS_REGION: ap-southeast-1
@@ -28,7 +28,7 @@ jobs:
       - name: Configure AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::749043157095:role/gha-tf-plan
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/gha-tf-plan
           aws-region: ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v3

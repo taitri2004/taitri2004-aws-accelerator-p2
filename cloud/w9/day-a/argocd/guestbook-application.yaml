@@ -1,6 +1,6 @@
-# Application mẫu — guestbook (repo chính thức của Argo)
-# Dùng làm "hello world" GitOps: 1 Application → ArgoCD pull từ Git → apply vào cluster.
-# Sau đó demo rollback bằng cách edit trong cluster → selfHeal revert ngay.
+# Application mẫu trỏ tới repo demo chính thức của Argo CD.
+# Dùng minh hoạ luồng GitOps cơ bản: ArgoCD pull manifest từ Git, apply vào
+# cluster, selfHeal khi cluster drift khỏi Git.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -20,7 +20,7 @@ spec:
     namespace: guestbook
   syncPolicy:
     automated:
-      prune: true       # xoá resource khi Git xoá
-      selfHeal: true    # revert mọi sửa tay trong cluster
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true

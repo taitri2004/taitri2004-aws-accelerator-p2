@@ -1,0 +1,21 @@
+# Personal / AI session context — never push
+knowledge/SESSION-HANDOFF.md
+**/SESSION-HANDOFF.md
+**/NOTES.md
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.pem

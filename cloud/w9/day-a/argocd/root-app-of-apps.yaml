@@ -1,12 +1,8 @@
-# App-of-Apps pattern (mẫu, chưa apply ở D1 — để dành lab T5).
-# Root Application chỉ trỏ tới folder `cloud/w9/lab/apps/` trong CHÍNH repo này.
-# Mỗi file YAML trong folder đó là 1 Application con (monitoring, otel, rollouts, demo-api...).
-#
-# Cách dùng (sẽ chạy ở lab T5, KHÔNG apply hôm nay):
-#   1. Sửa repoURL → repo HV (taitri2004/taitri2004-aws-accelerator-p2)
-#   2. Đảm bảo branch `main` đã có folder cloud/w9/lab/apps/ với các Application YAML
-#   3. kubectl apply -f root-app-of-apps.yaml
-#   4. ArgoCD tự discover và sync tất cả app con
+# App-of-Apps pattern mẫu cho lab.
+# Root Application trỏ tới folder `cloud/w9/lab/apps/` trong repo này. Mỗi file
+# YAML trong folder đó là một Application con (monitoring, otel, rollouts,
+# demo-api...). Áp dụng root sẽ kích hoạt ArgoCD discover và sync tất cả app
+# con.
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application

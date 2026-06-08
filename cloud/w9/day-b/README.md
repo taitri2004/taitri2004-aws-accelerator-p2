@@ -1,27 +1,26 @@
-# W9 — Day B (T3 09/06): Observability — SLO/SLI/OTel
+# W9 — Day B: Observability (SLO/SLI/OTel)
 
-> Self-study D2. Scope: OTel SDK + Collector, Prometheus + Grafana + Loki,
-> SLO methodology, multi-window burn rate alert (1h×5m fast, 6h×30m slow).
-> Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §5–§7.
+Scope D2: OpenTelemetry SDK + Collector, Prometheus + Grafana + Loki, SLO
+methodology, multi-window burn rate alert (1h × 5m fast, 6h × 30m slow).
+Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §5–§7.
 
 ## Layout
 
 ```
 day-b/
-├── README.md
-├── notes.md
-├── NOTES.md              # PRIVATE
-├── screenshots/          # Grafana dashboard, alert rule fire
-├── otel/                 # collector config thử nghiệm
-├── dashboards/           # Grafana dashboard JSON
-└── alert-rules/          # PrometheusRule YAML (burn rate)
+  README.md
+  notes.md
+  EVIDENCE_PACK.md
+  screenshots/
+  otel/                       OpenTelemetry Collector config
+  dashboards/                 Grafana dashboard JSON
+  alert-rules/                PrometheusRule cho burn rate
 ```
 
-## TODO hôm nay
-- [ ] Đọc lý thuyết §5–§7 + Google SRE Workbook (Alerting on SLOs)
-- [ ] Cài kube-prometheus-stack qua helm (hoặc ArgoCD App từ D1)
-- [ ] Cài OTel Collector, ghép pipeline traces→logs→metrics
-- [ ] Viết recording rule + 2 alert (fast/slow) cho SLO 99.9%
-- [ ] Tạo Grafana dashboard "SLO + error budget burndown"
-- [ ] Bắn lỗi giả (sleep + 500) → xác nhận alert fire trong 5–7 phút
-- [ ] Commit `[W9-D2] <topic>`
+## Nội dung
+
+1. Cài kube-prometheus-stack qua Helm hoặc ArgoCD Application.
+2. Cài OpenTelemetry Collector, cấu hình pipeline traces / logs / metrics.
+3. Viết recording rule + hai alert (fast / slow) cho SLO 99.9%.
+4. Tạo Grafana dashboard SLO + error budget burndown.
+5. Bắn lỗi giả để xác nhận alert fire.

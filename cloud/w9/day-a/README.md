@@ -1,26 +1,35 @@
-# W9 — Day A (T2 08/06): GitOps & CI/CD
+# W9 — Day A: GitOps & CI/CD
 
-> Self-study D1. Scope: GitHub Actions plan-on-PR/apply-on-merge, ArgoCD vs Flux,
-> App-of-Apps, sync waves, rollback (`git revert` vs `kubectl rollout undo`).
-> Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §1–§4.
+Scope D1: GitHub Actions plan-on-PR / apply-on-merge, ArgoCD vs Flux,
+App-of-Apps, sync waves, rollback (`git revert` vs `kubectl rollout undo`).
+Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §1–§4.
 
 ## Layout
 
 ```
 day-a/
-├── README.md             # file này — lệnh + sơ đồ + giải thích
-├── notes.md              # ghi chú tự viết khi học (commit)
-├── NOTES.md              # PRIVATE — gitignore
-├── screenshots/          # evidence (ArgoCD UI, GH Actions run)
-├── argocd/               # Application YAML thử nghiệm
-└── .github-workflows/    # workflow mẫu (tên thư mục tránh GH chạy thật)
+  README.md
+  notes.md                    Ghi chú self-study
+  EVIDENCE_PACK.md            Tổng hợp bằng chứng (screenshot + log)
+  screenshots/                Ảnh chụp UI / terminal
+  argocd/
+    install.md                Quick guide cài ArgoCD lên minikube
+    guestbook-application.yaml
+    nginx-demo-application.yaml
+    root-app-of-apps.yaml     Mẫu App-of-Apps cho lab
+    manifests/
+      nginx-demo/             Manifests dùng cho demo git revert
+  .github-workflows/          Mẫu workflow (đổi tên `.github-workflows`
+                              để GitHub không tự trigger; copy sang
+                              `.github/workflows/` khi muốn enable thật)
 ```
 
-## TODO hôm nay
-- [ ] Đọc lý thuyết §1–§4 trong foundation note
-- [ ] Cài ArgoCD lên minikube, port-forward UI, đổi password
-- [ ] Tạo 1 `Application` đơn giản (guestbook hoặc nginx) → sync
-- [ ] Viết workflow `tf-plan.yml` mẫu cho `cloud/w8/exercise`
-- [ ] Demo rollback: `git revert` 1 commit → ArgoCD tự sync lại
-- [ ] Screenshot evidence
-- [ ] Commit `[W9-D1] <topic>`
+## Nội dung
+
+1. Cài ArgoCD core lên minikube W8, port-forward UI.
+2. Apply `Application` mẫu (guestbook) để minh hoạ ArgoCD pull từ Git.
+3. Demo selfHeal: scale tay → ArgoCD revert.
+4. Demo `git revert` rollback: thay đổi manifest qua Git → ArgoCD sync → revert.
+5. Workflow Terraform plan-on-PR / apply-on-merge với GitHub OIDC.
+
+Chi tiết bằng chứng xem `EVIDENCE_PACK.md`.

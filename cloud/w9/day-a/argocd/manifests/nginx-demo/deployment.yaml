@@ -1,7 +1,3 @@
-# Demo Deployment cho W9-D1: ArgoCD sync từ chính repo này (taitri2004/...).
-# Mục đích: chứng minh rollback bằng `git revert` — sửa replicas, commit, ArgoCD
-# tự sync; revert commit, ArgoCD tự sync lại. Audit trail = `git log`.
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
