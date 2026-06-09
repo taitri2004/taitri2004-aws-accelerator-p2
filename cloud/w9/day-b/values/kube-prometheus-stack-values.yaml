@@ -1,0 +1,35 @@
+# Helm values cho kube-prometheus-stack trên minikube.
+# Mục tiêu: gọn tài nguyên + tự động pick up mọi PrometheusRule / ServiceMonitor
+# trong cluster (không cần gắn label release).
+
+# Cho phép Prometheus chọn rule/serviceMonitor không cần label release cụ thể.
+prometheus:
+  prometheusSpec:
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 6h
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits:   { memory: 800Mi }
+
+# Grafana: đặt password cố định cho demo (đổi nếu cần).
+grafana:
+  adminPassword: admin
+  defaultDashboardsTimezone: Asia/Bangkok
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { memory: 256Mi }
+
+# Giảm tải cho minikube: tắt vài component không cần cho D2.
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
+      limits:   { memory: 128Mi }
+
+# Các exporter của node/kube-state giữ mặc định (nhẹ).
+prometheusOperator:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { memory: 256Mi }

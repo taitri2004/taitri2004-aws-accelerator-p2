@@ -1,0 +1,32 @@
+# podinfo: app demo expose metric Prometheus tại /metrics (port 9898).
+# Endpoint hữu ích cho demo SLO:
+#   GET /            → 200 OK
+#   GET /status/500  → trả 500 (dùng bắn lỗi giả để kích burn rate alert)
+#   GET /delay/2     → trả chậm 2s (dùng demo latency SLO)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: demo
+  labels: { app: podinfo }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: podinfo }
+  template:
+    metadata:
+      labels: { app: podinfo }
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          ports:
+            - name: http
+              containerPort: 9898
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }

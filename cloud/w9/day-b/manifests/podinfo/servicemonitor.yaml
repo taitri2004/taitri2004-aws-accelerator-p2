@@ -1,0 +1,16 @@
+# ServiceMonitor: bảo Prometheus Operator scrape Service podinfo.
+# Prometheus (kube-prometheus-stack) tự discover ServiceMonitor này nhờ
+# serviceMonitorSelectorNilUsesHelmValues=false trong values.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: podinfo
+  namespace: demo
+  labels: { app: podinfo }
+spec:
+  selector:
+    matchLabels: { app: podinfo }
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

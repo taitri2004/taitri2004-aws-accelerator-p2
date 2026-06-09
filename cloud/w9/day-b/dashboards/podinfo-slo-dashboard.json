@@ -1,0 +1,78 @@
+{
+  "annotations": { "list": [] },
+  "title": "Podinfo SLO + Error Budget",
+  "uid": "podinfo-slo",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Success rate (5m)",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.95 },
+            { "color": "green", "value": 0.99 }
+          ] }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "1 - job:slo_errors:ratio_rate5m" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Error budget remaining (30d, SLO 99%)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 0.25 },
+            { "color": "green", "value": 0.5 }
+          ] }
+        }
+      },
+      "targets": [
+        { "refId": "A", "expr": "1 - (job:slo_errors:ratio_rate6h / 0.01)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error ratio per window",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        { "refId": "A", "expr": "job:slo_errors:ratio_rate5m",  "legendFormat": "5m" },
+        { "refId": "B", "expr": "job:slo_errors:ratio_rate30m", "legendFormat": "30m" },
+        { "refId": "C", "expr": "job:slo_errors:ratio_rate1h",  "legendFormat": "1h" },
+        { "refId": "D", "expr": "job:slo_errors:ratio_rate6h",  "legendFormat": "6h" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Burn rate vs alert thresholds (budget 0.01)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none" } },
+      "targets": [
+        { "refId": "A", "expr": "job:slo_errors:ratio_rate1h / 0.01",  "legendFormat": "burn 1h" },
+        { "refId": "B", "expr": "job:slo_errors:ratio_rate5m / 0.01",  "legendFormat": "burn 5m" },
+        { "refId": "C", "expr": "job:slo_errors:ratio_rate6h / 0.01",  "legendFormat": "burn 6h" },
+        { "refId": "D", "expr": "vector(14.4)", "legendFormat": "fast threshold 14.4x" },
+        { "refId": "E", "expr": "vector(6)",    "legendFormat": "slow threshold 6x" }
+      ]
+    }
+  ]
+}
