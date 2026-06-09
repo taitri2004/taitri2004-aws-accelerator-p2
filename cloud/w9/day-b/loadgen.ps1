@@ -1,14 +1,3 @@
-# Load generator cho demo burn rate.
-# Bắn request liên tục vào podinfo, một tỉ lệ trả 500 (qua endpoint /status/500)
-# để đẩy error ratio vượt ngưỡng burn rate => alert fire.
-#
-# Yêu cầu: đã port-forward podinfo trước:
-#   kubectl -n demo port-forward svc/podinfo 9898:9898
-#
-# Cách dùng:
-#   .\loadgen.ps1                 # mặc định 50% lỗi trong 300s
-#   .\loadgen.ps1 -ErrorRate 0.8 -DurationSec 600
-
 param(
   [double]$ErrorRate = 0.5,
   [int]$DurationSec = 300,

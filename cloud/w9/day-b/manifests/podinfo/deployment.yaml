@@ -1,8 +1,3 @@
-# podinfo: app demo expose metric Prometheus tại /metrics (port 9898).
-# Endpoint hữu ích cho demo SLO:
-#   GET /            → 200 OK
-#   GET /status/500  → trả 500 (dùng bắn lỗi giả để kích burn rate alert)
-#   GET /delay/2     → trả chậm 2s (dùng demo latency SLO)
 apiVersion: apps/v1
 kind: Deployment
 metadata:

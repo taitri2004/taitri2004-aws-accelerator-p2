@@ -1,15 +1,3 @@
-# PrometheusRule: SLO recording rules + multi-window multi-burn-rate alerts.
-#
-# SLO mục tiêu cho demo: 99% request thành công (không phải 5xx).
-#   => error budget = 1 - 0.99 = 0.01
-#
-# Multi-window burn rate (theo Google SRE Workbook):
-#   - Fast page: long 1h AND short 5m,  burn rate 14.4x  (tiêu 2% budget/1h)
-#   - Slow page: long 6h AND short 30m, burn rate 6x     (tiêu 5% budget/6h)
-# Hai cửa sổ cùng phải vượt ngưỡng mới fire => giảm noise + reset nhanh.
-#
-# Metric nguồn: http_request_duration_seconds_count của podinfo, có label
-# `status`. Lỗi = status bắt đầu bằng 5.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
