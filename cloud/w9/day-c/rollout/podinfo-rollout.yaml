@@ -1,0 +1,70 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: podinfo-canary
+  namespace: demo
+  labels: { app: podinfo-canary }
+spec:
+  replicas: 4
+  selector:
+    matchLabels: { app: podinfo-canary }
+  template:
+    metadata:
+      labels: { app: podinfo-canary }
+    spec:
+      containers:
+        - name: podinfo
+          image: ghcr.io/stefanprodan/podinfo:6.7.1
+          ports:
+            - name: http
+              containerPort: 9898
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: success-rate
+        args:
+          - name: service-name
+            value: podinfo-canary
+        startingStep: 1
+      steps:
+        - setWeight: 25
+        - pause: { duration: 30s }
+        - setWeight: 50
+        - pause: { duration: 30s }
+        - setWeight: 75
+        - pause: { duration: 30s }
+        - setWeight: 100
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo-canary
+  namespace: demo
+  labels: { app: podinfo-canary }
+spec:
+  selector: { app: podinfo-canary }
+  ports:
+    - name: http
+      port: 9898
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: podinfo-canary
+  namespace: demo
+  labels: { app: podinfo-canary }
+spec:
+  selector:
+    matchLabels: { app: podinfo-canary }
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

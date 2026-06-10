@@ -1,9 +1,3 @@
-# App-of-Apps pattern mẫu cho lab.
-# Root Application trỏ tới folder `cloud/w9/lab/apps/` trong repo này. Mỗi file
-# YAML trong folder đó là một Application con (monitoring, otel, rollouts,
-# demo-api...). Áp dụng root sẽ kích hoạt ArgoCD discover và sync tất cả app
-# con.
-
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

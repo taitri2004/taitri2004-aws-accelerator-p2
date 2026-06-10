@@ -1,7 +1,3 @@
-# Terraform apply-on-merge cho cloud/w8/exercise.
-# Trigger khi push lên main có file dưới cloud/w8/exercise/ thay đổi.
-# Gate: GitHub Environment "prod" cần manual approval trước khi apply.
-
 name: Terraform Apply (w8 exercise)
 
 on:

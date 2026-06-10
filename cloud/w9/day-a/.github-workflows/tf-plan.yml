@@ -1,7 +1,3 @@
-# Terraform plan-on-PR cho cloud/w8/exercise.
-# Trigger khi PR mở hoặc sửa file dưới cloud/w8/exercise/.
-# Output: plan kết quả được comment lên PR cho reviewer.
-
 name: Terraform Plan (w8 exercise)
 
 on:

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canary-load
+  namespace: demo
+  labels: { app: canary-load }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: canary-load }
+  template:
+    metadata:
+      labels: { app: canary-load }
+    spec:
+      containers:
+        - name: load
+          image: curlimages/curl:8.11.0
+          env:
+            - name: TARGET
+              value: "/"
+          command: ["sh", "-c"]
+          args:
+            - while true; do curl -s -o /dev/null "http://podinfo-canary.demo:9898${TARGET}"; sleep 0.1; done
+          resources:
+            requests: { cpu: 20m, memory: 16Mi }
+            limits:   { cpu: 100m, memory: 32Mi }
