@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+  namespace: waves-demo
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  MESSAGE: "hello from app-of-apps + sync waves"

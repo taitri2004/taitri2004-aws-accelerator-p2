@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: waves-demo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/taitri2004/taitri2004-aws-accelerator-p2.git
+    targetRevision: main
+    path: cloud/w9/day-a/argocd/app-of-apps-demo/manifests/waves-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: waves-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

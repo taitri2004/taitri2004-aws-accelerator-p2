@@ -1,0 +1,16 @@
+name: validate
+on:
+  pull_request:
+    paths:
+      - 'cloud/w9/day-a/argocd/app-of-apps-demo/manifests/**'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSLo kc.tgz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kc.tgz && sudo mv kubeconform /usr/local/bin/
+      - name: Validate manifests
+        run: kubeconform -strict -summary -ignore-missing-schemas cloud/w9/day-a/argocd/app-of-apps-demo/manifests/

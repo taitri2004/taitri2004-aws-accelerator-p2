@@ -86,6 +86,10 @@ metadata:
 Dùng khi: CRD phải có trước Operator; DB migration trước Deployment; smoke
 test sau cùng (PostSync).
 
+Thứ tự điển hình: Namespace `-1` → ConfigMap/Secret `0` → Deployment `1` →
+Service `2`. Thiếu wave: Deployment chạy trước ConfigMap nó cần → pod lỗi
+`CreateContainerConfigError`.
+
 ### 2.5 ApplicationSet
 Sinh nhiều App từ một template (theo cluster list, Git folder, list literal).
 Phù hợp cho multi-cluster bootstrap.
@@ -102,6 +106,25 @@ Phù hợp cho multi-cluster bootstrap.
 Cả hai đều CNCF Graduated. W9 sử dụng ArgoCD theo yêu cầu của chương trình.
 
 Docs: https://argo-cd.readthedocs.io · https://fluxcd.io/flux
+
+### 2.7 Synced ≠ Healthy + ba thao tác (Sync / Self-Heal / Prune)
+
+ArgoCD có **hai trạng thái độc lập**, rất hay nhầm:
+- **Synced** — cluster có khớp Git không? (so YAML Git vs cluster). Khớp =
+  Synced, lệch = OutOfSync.
+- **Healthy** — resource có chạy tốt không? (check Pod status). Chạy = Healthy,
+  lỗi = Degraded.
+
+Ví dụ kinh điển: push `image: v2-loi` → ArgoCD apply thành công → **Synced**
+nhưng Pod crash → **Degraded**. Synced chỉ nói "đã apply đúng cái Git ghi",
+không bảo đảm app chạy được.
+
+Ba thao tác:
+| Thao tác | Nghĩa |
+|---|---|
+| Sync | đưa cluster về khớp Git (apply cái Git có) |
+| Self-Heal | sửa cluster tay làm lệch Git → tự kéo về Git (drift remediation) |
+| Prune | xoá khỏi Git → xoá khỏi cluster (mặc định tắt, bật `prune: true`) |
 
 ---
 
@@ -189,6 +212,30 @@ GitHub OIDC issuer + IAM role `AssumeRoleWithWebIdentity`, không cần
 
 Docs: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 
+### 3.4 CI cho manifest K8s + Branch Protection
+
+Với GitOps thuần (manifest K8s, không Terraform), CI chỉ **validate**, KHÔNG
+apply — ArgoCD lo phần apply (CD). Phân vai rõ: **CI = gác cổng, CD = ArgoCD**.
+
+```yaml
+name: validate
+on: { pull_request: { paths: ["k8s/**"] } }
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: kubeconform -strict -summary k8s/
+```
+
+- **kubeconform** check manifest đúng schema K8s; sai schema → CI đỏ.
+- **Branch Protection** (GitHub → Settings → Branches → rule `main`) là lớp ép
+  buộc làm GitOps thực sự an toàn:
+  - Require a pull request before merging (+ approvals)
+  - Require status checks to pass → chọn `validate`
+  - No bypassing (admin cũng không push thẳng)
+  → Không ai push thẳng `main`; mọi thay đổi qua PR + review + CI xanh.
+
 ---
 
 ## §4. Rollback — `git revert` vs `kubectl rollout undo`
@@ -198,7 +245,15 @@ Docs: https://docs.github.com/en/actions/deployment/security-hardening-your-depl
 | Nguồn sự thật | Git | Cluster (sẽ drift) |
 | Audit | PR mới, history rõ | Không log ở Git |
 | Khi nào dùng | Default cho mọi rollback | Emergency, sau đó phải sync lại Git ngay |
-| Rủi ro | Có thể revert kèm config khác → conflict | Drift, ArgoCD selfHeal có thể roll forward lại |
+| Lịch sử | Git history vĩnh viễn | Mất sau ~10 revisions, không có message |
+| Tốc độ | 1–3 phút (ArgoCD poll) | Tức thì |
+| Rủi ro | Có thể revert kèm config khác → conflict | Bị selfHeal ghi đè → rollback giả |
+
+**Vì sao `kubectl rollout undo` là "rollback giả" dưới GitOps:** Git vẫn ghi
+version lỗi (vd v2). Undo về v1 → cluster lệch Git → ArgoCD selfHeal thấy
+OutOfSync → apply lại v2 → cluster quay về version lỗi sau vài giây. Chỉ
+`git revert` (sửa nguồn sự thật) mới rollback thật. Trade-off: chậm 1–3 phút
+nhưng an toàn + có audit.
 
 Quy tắc: GitOps strict chỉ revert. Nếu phải undo cấp cứu thì tắt auto-sync,
 undo, sửa Git, bật lại sync.
