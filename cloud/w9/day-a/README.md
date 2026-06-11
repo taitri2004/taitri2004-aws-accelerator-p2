@@ -1,7 +1,7 @@
 # W9 — Day A: GitOps & CI/CD
 
-Scope D1: GitHub Actions plan-on-PR / apply-on-merge, ArgoCD vs Flux,
-App-of-Apps, sync waves, rollback (`git revert` vs `kubectl rollout undo`).
+Scope D1: GitOps với ArgoCD, Application, self-heal, rollback bằng Git,
+App-of-Apps, sync waves và CI validate manifest trên pull request.
 Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §1–§4.
 
 ## Layout
@@ -9,27 +9,43 @@ Tài liệu nền: [`knowledge/w9-foundation-gitops-observability-canary.md`](..
 ```
 day-a/
   README.md
-  notes.md                    Ghi chú self-study
   EVIDENCE_PACK.md            Tổng hợp bằng chứng (screenshot + log)
   screenshots/                Ảnh chụp UI / terminal
   argocd/
     install.md                Quick guide cài ArgoCD lên minikube
     guestbook-application.yaml
     nginx-demo-application.yaml
-    root-app-of-apps.yaml     Mẫu App-of-Apps cho lab
+    root-app-of-apps.yaml     Root Application cho app-of-apps
+    app-of-apps-demo/
+      root.yaml               Root Application
+      apps/                   Application con
+      manifests/waves-demo/   Namespace, ConfigMap, Deployment, Service
     manifests/
       nginx-demo/             Manifests dùng cho demo git revert
-  .github-workflows/          Mẫu workflow (đổi tên `.github-workflows`
-                              để GitHub không tự trigger; copy sang
-                              `.github/workflows/` khi muốn enable thật)
+  .github-workflows/          Workflow samples
 ```
 
-## Nội dung
+Workflow chạy thật nằm ở repo root: `.github/workflows/validate-w9-day-a.yml`.
 
-1. Cài ArgoCD core lên minikube W8, port-forward UI.
-2. Apply `Application` mẫu (guestbook) để minh hoạ ArgoCD pull từ Git.
-3. Demo selfHeal: scale tay → ArgoCD revert.
-4. Demo `git revert` rollback: thay đổi manifest qua Git → ArgoCD sync → revert.
-5. Workflow Terraform plan-on-PR / apply-on-merge với GitHub OIDC.
+## Lab 0-7
+
+| Lab | Nội dung | Artifact chính |
+|---|---|---|
+| 0 | Chuẩn bị cluster, repo và app manifest trên Git | `argocd/manifests/nginx-demo/` |
+| 1 | Cài ArgoCD | `argocd/install.md` |
+| 2 | Tạo Application để ArgoCD tự sync | `argocd/guestbook-application.yaml`, `argocd/nginx-demo-application.yaml` |
+| 3 | Sync qua Git và self-heal khi có drift | `guestbook-application.yaml` có `selfHeal: true` |
+| 4 | Rollback bằng `git revert` | `argocd/manifests/nginx-demo/deployment.yaml` + git history |
+| 5 | App-of-Apps | `argocd/root-app-of-apps.yaml`, `argocd/app-of-apps-demo/apps/waves-demo.yaml` |
+| 6 | Sync waves | `argocd/app-of-apps-demo/manifests/waves-demo/` |
+| 7 | CI validate manifest trên PR | `.github/workflows/validate-w9-day-a.yml` |
+
+## Run
+
+```powershell
+kubectl apply -f cloud/w9/day-a/argocd/guestbook-application.yaml
+kubectl apply -f cloud/w9/day-a/argocd/nginx-demo-application.yaml
+kubectl apply -f cloud/w9/day-a/argocd/root-app-of-apps.yaml
+```
 
 Chi tiết bằng chứng xem `EVIDENCE_PACK.md`.

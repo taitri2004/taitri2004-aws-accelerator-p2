@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: w9-lab-root
+  name: root
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/taitri2004/taitri2004-aws-accelerator-p2.git
     targetRevision: main
-    path: cloud/w9/lab/apps
+    path: cloud/w9/day-a/argocd/app-of-apps-demo/apps
     directory:
       recurse: true
   destination:

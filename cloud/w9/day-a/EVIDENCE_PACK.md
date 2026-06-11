@@ -1,7 +1,8 @@
-# W9-D1 — Evidence Pack
+﻿# W9-D1 — Evidence Pack
 
 Bằng chứng đã làm D1 GitOps & CI/CD: cài ArgoCD, deploy Application từ Git,
-demo selfHeal, demo rollback bằng `git revert`.
+demo selfHeal, rollback bằng `git revert`, app-of-apps, sync waves và CI
+validate manifest.
 
 Môi trường:
 - Cluster: minikube v1.38.1 (Docker driver), Kubernetes v1.35.1
@@ -55,15 +56,64 @@ nằm trong Git, không cần truy vấn cluster.
 
 ![Git log audit](screenshots/07-git-log-audit.png)
 
+## 6. App-of-Apps
+
+Root Application `root` trỏ tới folder `cloud/w9/day-a/argocd/app-of-apps-demo/apps`.
+Trong folder này có Application con `waves-demo`, nên sau khi apply root một lần,
+ArgoCD có thể tự quản các app con theo Git.
+
+Trạng thái kiểm tra:
+
+```text
+root         Synced    Healthy
+waves-demo   Synced    Healthy
+```
+
+![root app-of-apps và waves-demo](screenshots/08-root-app-of-apps.png)
+
+Artifact:
+- `argocd/root-app-of-apps.yaml`
+- `argocd/app-of-apps-demo/root.yaml`
+- `argocd/app-of-apps-demo/apps/waves-demo.yaml`
+
+## 7. Sync waves
+
+Application `waves-demo` triển khai 4 resource với thứ tự rõ ràng:
+
+| Resource | Wave |
+|---|---:|
+| Namespace `waves-demo` | -1 |
+| ConfigMap `web-config` | 0 |
+| Deployment `web` | 1 |
+| Service `web` | 2 |
+
+Deployment đọc ConfigMap bằng `envFrom`, nên ConfigMap cần được apply trước
+Deployment. Sync waves giúp ArgoCD áp dụng resource theo đúng thứ tự này.
+
+![waves-demo resource tree](screenshots/09-waves-demo-tree.png)
+
+Artifact:
+- `argocd/app-of-apps-demo/manifests/waves-demo/namespace.yaml`
+- `argocd/app-of-apps-demo/manifests/waves-demo/configmap.yaml`
+- `argocd/app-of-apps-demo/manifests/waves-demo/deployment.yaml`
+- `argocd/app-of-apps-demo/manifests/waves-demo/service.yaml`
+
+## 8. CI validate manifest trên PR
+
+Workflow `validate-w9-day-a` chạy trên pull request khi có thay đổi trong
+`cloud/w9/day-a/argocd/app-of-apps-demo/`. Job cài `kubeconform` và validate
+Kubernetes manifests trước khi merge.
+
+Artifact:
+- `.github/workflows/validate-w9-day-a.yml`
+- `cloud/w9/day-a/.github-workflows/validate.yml`
+
 ## Kết luận
 
 - ArgoCD pull desired state từ Git, reconcile cluster tự động.
 - Mọi thay đổi hợp lệ đi qua Git (commit / PR), không `kubectl apply` tay.
 - Rollback chuẩn GitOps = `git revert`, audit trail = `git log`.
 - SelfHeal vô hiệu hoá drift do can thiệp tay vào cluster.
-
-## Tham chiếu
-
-- Foundation note: [`knowledge/w9-foundation-gitops-observability-canary.md`](../../../knowledge/w9-foundation-gitops-observability-canary.md) §1–§4
-- ArgoCD docs: https://argo-cd.readthedocs.io
-- OpenGitOps principles: https://opengitops.dev
+- App-of-Apps giúp chỉ cần apply root một lần; app con được quản lý qua Git.
+- Sync waves ép đúng thứ tự apply: namespace/config trước, workload sau.
+- CI validate manifest trước khi merge vào `main`.
