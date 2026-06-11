@@ -73,7 +73,6 @@ waves-demo   Synced    Healthy
 
 Artifact:
 - `argocd/root-app-of-apps.yaml`
-- `argocd/app-of-apps-demo/root.yaml`
 - `argocd/app-of-apps-demo/apps/waves-demo.yaml`
 
 ## 7. Sync waves
@@ -107,7 +106,6 @@ Kubernetes manifests trước khi merge.
 
 Artifact:
 - `.github/workflows/validate-w9-day-a.yml`
-- `cloud/w9/day-a/.github-workflows/validate.yml`
 
 ## Kết luận
 

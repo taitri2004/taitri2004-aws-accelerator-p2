@@ -17,12 +17,10 @@ day-a/
     nginx-demo-application.yaml
     root-app-of-apps.yaml     Root Application cho app-of-apps
     app-of-apps-demo/
-      root.yaml               Root Application
       apps/                   Application con
       manifests/waves-demo/   FE/BE app with sync waves
     manifests/
       nginx-demo/             Manifests dùng cho demo git revert
-  .github-workflows/          Workflow samples
 ```
 
 Workflow chạy thật nằm ở repo root: `.github/workflows/validate-w9-day-a.yml`.
