@@ -78,19 +78,20 @@ Artifact:
 
 ## 7. Sync waves
 
-Application `waves-demo` triển khai 4 resource với thứ tự rõ ràng:
+Application `waves-demo` triển khai app FE/BE đơn giản với thứ tự rõ ràng:
 
 | Resource | Wave |
 |---|---:|
 | Namespace `waves-demo` | -1 |
-| ConfigMap `web-config` | 0 |
-| Deployment `web` | 1 |
-| Service `web` | 2 |
+| ConfigMap `frontend-content`, `frontend-nginx` | 0 |
+| Service `backend` | 1 |
+| Deployment `backend` | 2 |
+| Deployment `frontend` | 3 |
+| Service `frontend` | 4 |
 
-Deployment đọc ConfigMap bằng `envFrom`, nên ConfigMap cần được apply trước
-Deployment. Sync waves giúp ArgoCD áp dụng resource theo đúng thứ tự này.
-
-![waves-demo resource tree](screenshots/09-waves-demo-tree.png)
+Frontend dùng nginx để serve HTML và proxy `/api` sang backend qua Kubernetes
+DNS nội bộ `backend.waves-demo.svc.cluster.local`. Sync waves giúp ConfigMap và
+backend service có trước khi frontend khởi động.
 
 Artifact:
 - `argocd/app-of-apps-demo/manifests/waves-demo/namespace.yaml`
@@ -116,4 +117,5 @@ Artifact:
 - SelfHeal vô hiệu hoá drift do can thiệp tay vào cluster.
 - App-of-Apps giúp chỉ cần apply root một lần; app con được quản lý qua Git.
 - Sync waves ép đúng thứ tự apply: namespace/config trước, workload sau.
+- `waves-demo` có frontend nginx và backend HTTP echo để minh hoạ app nhiều tier.
 - CI validate manifest trước khi merge vào `main`.

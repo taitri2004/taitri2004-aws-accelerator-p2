@@ -1,9 +1,59 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: web-config
+  name: frontend-content
   namespace: waves-demo
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 data:
-  MESSAGE: "hello from app-of-apps + sync waves"
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>W9 GitOps FE/BE</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #1f2937; }
+        .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 20px; max-width: 680px; }
+        h1 { margin-top: 0; }
+        code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h1>Frontend is running</h1>
+        <p>This page is served by nginx in the <code>frontend</code> Deployment.</p>
+        <p>Backend response:</p>
+        <pre id="api">loading...</pre>
+      </div>
+      <script>
+        fetch('/api')
+          .then((response) => response.text())
+          .then((text) => { document.getElementById('api').textContent = text; })
+          .catch((error) => { document.getElementById('api').textContent = error.message; });
+      </script>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx
+  namespace: waves-demo
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+
+      location / {
+        root /usr/share/nginx/html;
+        index index.html;
+      }
+
+      location /api {
+        proxy_pass http://backend.waves-demo.svc.cluster.local:5678/;
+      }
+    }

@@ -19,7 +19,7 @@ day-a/
     app-of-apps-demo/
       root.yaml               Root Application
       apps/                   Application con
-      manifests/waves-demo/   Namespace, ConfigMap, Deployment, Service
+      manifests/waves-demo/   FE/BE app with sync waves
     manifests/
       nginx-demo/             Manifests dùng cho demo git revert
   .github-workflows/          Workflow samples
@@ -37,7 +37,7 @@ Workflow chạy thật nằm ở repo root: `.github/workflows/validate-w9-day-a
 | 3 | Sync qua Git và self-heal khi có drift | `guestbook-application.yaml` có `selfHeal: true` |
 | 4 | Rollback bằng `git revert` | `argocd/manifests/nginx-demo/deployment.yaml` + git history |
 | 5 | App-of-Apps | `argocd/root-app-of-apps.yaml`, `argocd/app-of-apps-demo/apps/waves-demo.yaml` |
-| 6 | Sync waves | `argocd/app-of-apps-demo/manifests/waves-demo/` |
+| 6 | Sync waves cho FE/BE app | `argocd/app-of-apps-demo/manifests/waves-demo/` |
 | 7 | CI validate manifest trên PR | `.github/workflows/validate-w9-day-a.yml` |
 
 ## Run
