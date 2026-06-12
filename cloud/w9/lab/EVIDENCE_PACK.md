@@ -5,17 +5,16 @@ Argo Rollouts, app `w9-api` (Flask) dạng Rollout canary.
 
 ## 1. GitOps — mọi thứ qua Git, ArgoCD Synced
 
-- `kubectl -n argocd get applications` → root + web + kube-prometheus-stack +
-  argo-rollouts + api + slo đều Synced/Healthy.
-- App-of-apps: apply `root.yaml` một lần, các app con tự sinh.
+Apply `root.yaml` (app-of-apps) một lần → ArgoCD tự tạo app con từ Git. Các app
+graded `api`, `slo`, `web` đều Healthy/Synced, repoURL trỏ về repo này, path
+`cloud/w9/lab/...` — chứng minh reproduce hoàn toàn từ Git.
 
-(ảnh: screenshots/01-argocd-apps.png)
+![ArgoCD apps synced](screenshots/01-argocd-apps-synced.png)
 
 ## 2. Observability — Prometheus thấy metric api
 
-- ServiceMonitor `api` UP, query `flask_http_request_total{namespace="api"}` tăng.
-
-(ảnh: screenshots/02-prometheus-api-metric.png)
+ServiceMonitor `api` UP, query `flask_http_request_total{namespace="api"}` tăng;
+baseline success-rate = 1.0 (loadgen sinh traffic sạch).
 
 ## 3. Canary auto-abort (quan trọng nhất) — đã verify
 
@@ -43,7 +42,7 @@ Trạng thái sau abort:
 - ReplicaSet revision 1 (good) -> 4/4 ready.
 - 4 pod đang chạy đều `ERROR_RATE=0 VERSION=v1`. Bản lỗi v2 KHÔNG ra production.
 
-(ảnh: screenshots/03-rollout-good.png, 04-rollout-bad-aborted.png)
+![Rollout auto-abort](screenshots/02-rollout-auto-abort.png)
 
 ## 4. SLO + alert → email — đã verify
 
@@ -58,7 +57,7 @@ Diễn tiến verify: deploy injector lỗi 100% (Service chia ~50% traffic lỗ
 error ratio 5m leo 0.05 → 0.44; sau ~10 phút cửa sổ 1h cũng vượt 14.4x budget →
 `ApiErrorBudgetBurnFast` Firing → Alertmanager gửi email.
 
-Email nhận được (ảnh `screenshots/06-email-received.png`):
+Email nhận được:
 ```
 1 alert for alertname=ApiErrorBudgetBurnFast — [1] Firing
 Labels: alertname=ApiErrorBudgetBurnFast, alertgroup=lab, severity=page,
@@ -67,11 +66,11 @@ Annotations: summary "API dot error budget nhanh (burn rate > 14.4x, SLO 99%)"
 Sent by Alertmanager
 ```
 
+![Email alert received](screenshots/06-email-received.png)
+
 ## 5. Rollback < 5 phút
 
 - `git revert` → ArgoCD sync về bản cũ; audit qua `git log`.
-
-(ảnh: screenshots/07-rollback.png)
 
 ## Kết luận
 
