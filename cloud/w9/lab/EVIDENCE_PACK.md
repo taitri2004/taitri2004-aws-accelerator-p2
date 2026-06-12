@@ -16,7 +16,14 @@ graded `api`, `slo`, `web` đều Healthy/Synced, repoURL trỏ về repo này, 
 ServiceMonitor `api` UP, query `flask_http_request_total{namespace="api"}` tăng;
 baseline success-rate = 1.0 (loadgen sinh traffic sạch).
 
-## 3. Canary auto-abort (quan trọng nhất) — đã verify
+## 3. Canary — đã verify cả 2 chiều
+
+GOOD run — deploy `w9-api:2` (thêm endpoint FE+BE, `ERROR_RATE=0`): canary
+25 → 50 → 100, AnalysisRun `Successful`, Rollout `Healthy`, 4/4 pod chạy bản mới.
+Giữa canary, FE proxy trả lẫn 2 bản (request vào pod cũ chưa có route mới trả 404)
+— đúng hành vi chia traffic 50/50.
+
+### Canary auto-abort (quan trọng nhất) — đã verify
 
 Môi trường verify: ns `api`, Rollout `api` (image `w9-api:1`), loadgen sinh traffic,
 Prometheus scrape 4/4 pod UP, baseline success-rate = 1.0.
