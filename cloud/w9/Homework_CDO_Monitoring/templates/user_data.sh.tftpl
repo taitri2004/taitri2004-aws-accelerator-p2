@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euxo pipefail
+
+# Slide Session 02: cai + cau hinh + chay CloudWatch Agent
+# Amazon Linux 2023 da co package amazon-cloudwatch-agent trong repo
+dnf install -y amazon-cloudwatch-agent
+
+# Ghi file config (mem + disk - metric ma hypervisor khong thay duoc)
+echo "${agent_config_b64}" | base64 -d > /opt/aws/amazon-cloudwatch-agent/etc/cw-agent-config.json
+
+# Nap config va khoi dong agent (-s = start)
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/cw-agent-config.json
+
+systemctl enable amazon-cloudwatch-agent
