@@ -7,7 +7,7 @@ SLO vi phạm thì alert về email.
 ## Yêu cầu
 
 - Docker, kubectl, minikube, git, plugin `kubectl-argo-rollouts`, `kubeconform`.
-- `minikube start -p w9 --cpus=4 --memory=6g --driver=docker`
+- `minikube start --cpus=4 --memory=6g --driver=docker`
 - ArgoCD pull từ chính repo này (`main`), các Application trỏ vào `cloud/w9/lab/...`.
 
 
@@ -15,8 +15,8 @@ SLO vi phạm thì alert về email.
 
 ```
 cloud/w9/lab/
-  app/                     Flask api (/, /metrics, /healthz; env ERROR_RATE, VERSION)
-  k8s/                     web app (Namespace, ConfigMap, Deployment, Service) — sync waves
+  app/                     Flask BE (API JSON /api/*, /metrics; env ERROR_RATE, VERSION)
+  k8s/                     web FE: nginx serve trang + reverse proxy /api/ sang BE — sync waves
   k8s-api/
     api.yaml               Rollout (canary + analysis) + Service
     analysis-template.yaml  auto-abort theo success rate (Prometheus)
@@ -37,7 +37,7 @@ CI: `.github/workflows/validate-w9-lab.yml` chạy kubeconform khi mở PR.
 ## Phần A — GitOps
 
 ```powershell
-minikube start -p w9 --cpus=4 --memory=6g --driver=docker
+minikube start --cpus=4 --memory=6g --driver=docker
 
 # ArgoCD (--server-side vì CRD > 256KB)
 kubectl create ns argocd
@@ -73,12 +73,25 @@ kubectl apply -n argo-rollouts --server-side --force-conflicts `
   -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 
 # Image cho api (nạp thẳng vào cụm, không cần registry)
-docker build -t w9-api:1 cloud/w9/lab/app/
-minikube image load w9-api:1 -p w9
+docker build -t w9-api:2 cloud/w9/lab/app/
+minikube image load w9-api:2
 ```
 
 `k8s-api/` đã có Rollout `api`, Service, ServiceMonitor — ArgoCD deploy. Kiểm tra
 metric tại Prometheus (`flask_http_request_total{namespace="api"}`).
+
+### Web FE + BE
+
+FE (`web`, nginx) serve trang dashboard và reverse proxy `/api/` sang BE (`api`,
+Flask) qua DNS nội bộ `api.api.svc.cluster.local:8080` — trình duyệt ở ngoài cụm
+không gọi thẳng BE được nên phải đi qua proxy. Trang có 4 chức năng gọi BE:
+trạng thái backend (version/pod/uptime, tự refresh), bắn 20 request đo success
+rate, echo xử lý chuỗi, bộ đếm lượt thăm theo pod.
+
+```powershell
+kubectl -n web port-forward svc/web 18080:80
+# mo http://localhost:18080
+```
 
 ---
 

@@ -8,6 +8,246 @@ metadata:
 data:
   MESSAGE: "hello from gitops lab"
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-static
+  namespace: web
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location /api/ {
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s ipv6=off;
+        set $backend http://api.api.svc.cluster.local:8080;
+        proxy_pass $backend;
+        proxy_set_header Host $host;
+      }
+    }
+  index.html: |
+    <!doctype html>
+    <html lang="vi">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ship Smartly - W9 Lab</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: rgba(255,255,255,.05);
+        --border: rgba(255,255,255,.10);
+        --text: #e8ecf6;
+        --muted: #93a0b8;
+        --accent: #6ea8fe;
+        --accent2: #b388ff;
+        --ok: #2dd4a7;
+        --bad: #ff5d73;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      .orb { position: fixed; border-radius: 50%; filter: blur(110px); opacity: .35; z-index: 0; }
+      .orb1 { width: 480px; height: 480px; background: #2848a8; top: -160px; left: -120px; }
+      .orb2 { width: 420px; height: 420px; background: #6a2ea0; bottom: -140px; right: -100px; }
+      .wrap { position: relative; z-index: 1; max-width: 1020px; margin: 0 auto; padding: 40px 20px 60px; }
+      header { text-align: center; margin-bottom: 36px; }
+      .eyebrow { letter-spacing: .35em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
+      h1 {
+        font-size: clamp(28px, 5vw, 44px);
+        margin: 10px 0 8px;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub { color: var(--muted); font-size: 14px; }
+      .statusline { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+      .dot.on { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 22px;
+        backdrop-filter: blur(8px);
+      }
+      .card h2 { font-size: 15px; margin-bottom: 4px; }
+      .card .desc { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; }
+      .kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+      .kv:last-of-type { border-bottom: 0; }
+      .kv .k { color: var(--muted); }
+      .badge { font-family: Consolas, monospace; font-size: 12.5px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); }
+      .badge.ver { color: #0b1020; background: linear-gradient(90deg, var(--accent), var(--accent2)); border: 0; font-weight: 600; }
+      button {
+        width: 100%;
+        padding: 11px 14px;
+        margin-top: 6px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        color: #0b1020;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform .12s, opacity .12s;
+      }
+      button:hover { transform: translateY(-1px); }
+      button:disabled { opacity: .45; cursor: wait; transform: none; }
+      input {
+        width: 100%;
+        padding: 11px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(0,0,0,.25);
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+      }
+      input:focus { border-color: var(--accent); }
+      .cells { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin: 14px 0 10px; }
+      .cell { aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,.08); transition: background .2s; }
+      .cell.ok { background: var(--ok); }
+      .cell.bad { background: var(--bad); }
+      .big { font-size: 30px; font-weight: 700; text-align: center; margin: 8px 0; }
+      .big.good { color: var(--ok); }
+      .big.poor { color: var(--bad); }
+      .result { font-family: Consolas, monospace; font-size: 13px; background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; min-height: 46px; white-space: pre-wrap; word-break: break-all; color: var(--muted); }
+      .result strong { color: var(--text); }
+      .lognote { text-align: center; color: var(--muted); font-size: 12px; margin-top: 26px; }
+      .pod { font-family: Consolas, monospace; font-size: 12px; }
+    </style>
+    </head>
+    <body>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="wrap">
+      <header>
+        <div class="eyebrow">Xbrain Accelerator - Week 9</div>
+        <h1>Ship Smartly</h1>
+        <div class="sub">Frontend (nginx) goi Backend (Flask) qua reverse proxy - deploy bang GitOps + Canary</div>
+        <div class="statusline"><span class="dot" id="dot"></span><span id="conn">dang ket noi backend...</span></div>
+      </header>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Trang thai Backend</h2>
+          <div class="desc">GET /api/info - tu refresh 3s/lan, doi version khi canary chuyen ban</div>
+          <div class="kv"><span class="k">Version</span><span class="badge ver" id="ver">--</span></div>
+          <div class="kv"><span class="k">Pod xu ly</span><span class="badge pod" id="pod">--</span></div>
+          <div class="kv"><span class="k">Uptime</span><span class="badge" id="up">--</span></div>
+          <div class="kv"><span class="k">Error rate (inject)</span><span class="badge" id="er">--</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Kiem tra do on dinh</h2>
+          <div class="desc">Ban 20 request toi /api/ping - mo phong dieu canary analysis do</div>
+          <div class="cells" id="cells"></div>
+          <div class="big" id="rate">--</div>
+          <button id="burstBtn" onclick="runBurst()">Gui 20 request</button>
+        </div>
+
+        <div class="card">
+          <h2>Echo - backend xu ly chuoi</h2>
+          <div class="desc">POST /api/echo - backend dao nguoc, viet hoa, dem ky tu</div>
+          <input id="echoIn" placeholder="Nhap chuoi bat ky..." onkeydown="if(event.key==='Enter')sendEcho()">
+          <button onclick="sendEcho()">Gui cho backend</button>
+          <div class="result" id="echoOut">ket qua hien o day</div>
+        </div>
+
+        <div class="card">
+          <h2>Bo dem luot ghe tham</h2>
+          <div class="desc">POST /api/visits - dem trong RAM tung pod, bam nhieu lan de thay 4 pod thay nhau tra loi</div>
+          <div class="big" id="visits">0</div>
+          <button onclick="addVisit()">Ghi nhan luot tham</button>
+          <div class="result" id="visitOut">moi pod giu bo dem rieng - so nhay qua lai la load balancing that</div>
+        </div>
+      </div>
+
+      <div class="lognote">web (FE) o namespace web - api (BE) o namespace api - nginx proxy /api/ sang api.api.svc:8080</div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const cells = $('cells');
+      for (let i = 0; i < 20; i++) cells.appendChild(document.createElement('div')).className = 'cell';
+
+      async function refreshInfo() {
+        try {
+          const r = await fetch('/api/info', { cache: 'no-store' });
+          const d = await r.json();
+          $('ver').textContent = d.version;
+          $('pod').textContent = d.pod;
+          $('up').textContent = d.uptime_s + 's';
+          $('er').textContent = (d.error_rate * 100).toFixed(0) + '%';
+          $('dot').className = 'dot on';
+          $('conn').textContent = 'backend OK (' + d.version + ')';
+        } catch (e) {
+          $('dot').className = 'dot';
+          $('conn').textContent = 'mat ket noi backend';
+        }
+      }
+      refreshInfo();
+      setInterval(refreshInfo, 3000);
+
+      async function runBurst() {
+        const btn = $('burstBtn');
+        btn.disabled = true;
+        const boxes = cells.children;
+        for (const b of boxes) b.className = 'cell';
+        let ok = 0;
+        for (let i = 0; i < 20; i++) {
+          try {
+            const r = await fetch('/api/ping', { cache: 'no-store' });
+            boxes[i].className = r.ok ? 'cell ok' : 'cell bad';
+            if (r.ok) ok++;
+          } catch (e) {
+            boxes[i].className = 'cell bad';
+          }
+        }
+        const pct = (ok / 20) * 100;
+        $('rate').textContent = pct.toFixed(0) + '%';
+        $('rate').className = 'big ' + (pct >= 95 ? 'good' : 'poor');
+        btn.disabled = false;
+      }
+
+      async function sendEcho() {
+        const text = $('echoIn').value.trim();
+        if (!text) return;
+        const r = await fetch('/api/echo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const d = await r.json();
+        $('echoOut').innerHTML =
+          'VIET HOA : <strong>' + d.upper + '</strong>\n' +
+          'DAO NGUOC: <strong>' + d.reversed + '</strong>\n' +
+          'DO DAI   : <strong>' + d.length + '</strong> ky tu\n' +
+          'pod xu ly: <strong>' + d.pod + '</strong>';
+      }
+
+      async function addVisit() {
+        const r = await fetch('/api/visits', { method: 'POST' });
+        const d = await r.json();
+        $('visits').textContent = d.count;
+        $('visitOut').innerHTML = 'pod <strong>' + d.pod + '</strong> dang giu bo dem = ' + d.count;
+      }
+    </script>
+    </body>
+    </html>
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,9 +271,22 @@ spec:
           envFrom:
             - configMapRef:
                 name: web-config
+          volumeMounts:
+            - name: static
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+            - name: static
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
           resources:
             requests: { cpu: 10m, memory: 16Mi }
-            limits:   { cpu: 50m, memory: 32Mi }
+            limits:   { cpu: 50m, memory: 64Mi }
+      volumes:
+        - name: static
+          configMap:
+            name: web-static
 ---
 apiVersion: v1
 kind: Service
