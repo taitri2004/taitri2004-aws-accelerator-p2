@@ -1,0 +1,69 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-slo
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: api-slo-recording
+      interval: 30s
+      rules:
+        - record: api:slo_errors:ratio_rate5m
+          expr: |
+            sum(rate(flask_http_request_total{namespace="api",status=~"5.."}[5m]))
+            / sum(rate(flask_http_request_total{namespace="api"}[5m]))
+        - record: api:slo_errors:ratio_rate30m
+          expr: |
+            sum(rate(flask_http_request_total{namespace="api",status=~"5.."}[30m]))
+            / sum(rate(flask_http_request_total{namespace="api"}[30m]))
+        - record: api:slo_errors:ratio_rate1h
+          expr: |
+            sum(rate(flask_http_request_total{namespace="api",status=~"5.."}[1h]))
+            / sum(rate(flask_http_request_total{namespace="api"}[1h]))
+        - record: api:slo_errors:ratio_rate6h
+          expr: |
+            sum(rate(flask_http_request_total{namespace="api",status=~"5.."}[6h]))
+            / sum(rate(flask_http_request_total{namespace="api"}[6h]))
+
+    - name: api-slo-alerts
+      rules:
+        - alert: ApiHighErrorRate
+          expr: api:slo_errors:ratio_rate5m > 0.05
+          for: 1m
+          labels:
+            severity: page
+            alertgroup: lab
+            slo: api-availability
+          annotations:
+            summary: "API error rate > 5% (cua so 5m) - SLO 99% bi pha"
+            description: "Ty le loi 5 phut cua API vuot 5%, chat luong dang tut."
+
+        - alert: ApiErrorBudgetBurnFast
+          expr: |
+            api:slo_errors:ratio_rate1h > (14.4 * 0.01)
+            and
+            api:slo_errors:ratio_rate5m > (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: page
+            alertgroup: lab
+            slo: api-availability
+          annotations:
+            summary: "API dot error budget nhanh (burn rate > 14.4x, SLO 99%)"
+            description: "Ty le loi cua API tren ca hai cua so 1h va 5m deu vuot 14.4x error budget."
+
+        - alert: ApiErrorBudgetBurnSlow
+          expr: |
+            api:slo_errors:ratio_rate6h > (6 * 0.01)
+            and
+            api:slo_errors:ratio_rate30m > (6 * 0.01)
+          for: 15m
+          labels:
+            severity: page
+            alertgroup: lab
+            slo: api-availability
+          annotations:
+            summary: "API dot error budget cham (burn rate > 6x, SLO 99%)"
+            description: "Ty le loi cua API tren ca hai cua so 6h va 30m deu vuot 6x error budget."

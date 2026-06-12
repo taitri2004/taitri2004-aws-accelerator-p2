@@ -1,0 +1,3 @@
+*.local.yaml
+smtp-secret.yaml
+secret-*.yaml

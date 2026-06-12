@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: api
+  labels: { app: loadgen }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: loadgen }
+  template:
+    metadata:
+      labels: { app: loadgen }
+    spec:
+      containers:
+        - name: load
+          image: curlimages/curl:8.11.0
+          command: ["sh", "-c"]
+          args:
+            - while true; do curl -s -o /dev/null http://api.api:8080/; sleep 0.2; done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 50m, memory: 32Mi }

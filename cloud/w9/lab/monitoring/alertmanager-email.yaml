@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: lab-email
+  namespace: monitoring
+  labels:
+    alertmanagerConfig: lab
+spec:
+  route:
+    receiver: email
+    groupBy: ["alertname"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 1h
+    matchers:
+      - name: alertgroup
+        value: lab
+  receivers:
+    - name: email
+      emailConfigs:
+        - to: tainguyenduc2004@gmail.com
+          from: tainguyenduc2004@gmail.com
+          smarthost: smtp.gmail.com:587
+          authUsername: tainguyenduc2004@gmail.com
+          authPassword:
+            name: smtp-secret
+            key: password
+          requireTLS: true
