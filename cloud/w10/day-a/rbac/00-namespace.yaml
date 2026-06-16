@@ -1,0 +1,27 @@
+# Namespace demo cho D1. Có sẵn label `team` để pass constraint K8sRequiredLabels.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: w10-demo
+  labels:
+    team: platform
+    purpose: w10-rbac-admission
+---
+# ServiceAccount đại diện cho 3 vai trò, dùng để impersonate khi test auth can-i.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: viewer
+  namespace: w10-demo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: developer
+  namespace: w10-demo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sre
+  namespace: w10-demo

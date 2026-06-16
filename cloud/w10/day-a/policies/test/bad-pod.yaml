@@ -1,0 +1,14 @@
+# Pod vi phạm CẢ 4 constraint — phải bị admission từ chối:
+#  - image :latest          (K8sBlockLatestTag, deny)
+#  - không có resource limit (K8sRequiredResources deny + VAP Deny)
+#  - chạy root              (K8sRequireRunAsNonRoot, dryrun -> chỉ audit)
+# Kỳ vọng: kubectl apply lỗi, message liệt kê các vi phạm enforce.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-pod
+  namespace: w10-demo
+spec:
+  containers:
+    - name: app
+      image: nginx:latest

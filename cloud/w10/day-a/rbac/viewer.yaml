@@ -1,0 +1,31 @@
+# viewer — read-only trong namespace w10-demo (onboarding / audit).
+# Chỉ get/list/watch; KHÔNG đọc secret, KHÔNG ghi gì.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: viewer
+  namespace: w10-demo
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "configmaps", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: viewer
+  namespace: w10-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: viewer
+subjects:
+  - kind: ServiceAccount
+    name: viewer
+    namespace: w10-demo
+  - kind: Group
+    name: viewers
+    apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,30 @@
+# ValidatingAdmissionPolicy native (K8s 1.30+) — không cần Gatekeeper webhook.
+# Dùng CEL trong API server. Đặt cạnh Gatekeeper để so sánh hai cách tiếp cận:
+# cùng yêu cầu "phải có memory limit" nhưng engine khác nhau.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-resource-limits
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.containers.all(c, has(c.resources) && has(c.resources.limits) && has(c.resources.limits.memory))"
+      message: "VAP: mọi container phải set memory limit (CEL native, không qua Gatekeeper)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-resource-limits-binding
+spec:
+  policyName: require-resource-limits
+  validationActions: ["Deny"]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: w10-demo

@@ -1,0 +1,35 @@
+# developer — quản workload trong namespace w10-demo của mình.
+# Được: deploy/exec/log/scale workload, đọc secret. KHÔNG được: sờ RBAC,
+# tạo/xoá namespace, đụng ResourceQuota/LimitRange (do SRE quản).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer
+  namespace: w10-demo
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec", "pods/portforward", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer
+  namespace: w10-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: developer
+subjects:
+  - kind: ServiceAccount
+    name: developer
+    namespace: w10-demo
+  - kind: Group
+    name: developers
+    apiGroup: rbac.authorization.k8s.io

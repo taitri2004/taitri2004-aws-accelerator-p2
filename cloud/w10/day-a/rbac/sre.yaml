@@ -1,0 +1,51 @@
+# sre — vận hành cross-namespace. ClusterRole vì cần xem node + quản
+# Gatekeeper constraint (cluster-scoped). KHÔNG cho phép sửa RBAC (escalation
+# risk) — chỉ đọc role/binding để audit.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sre
+rules:
+  # Đọc mọi thứ để điều tra sự cố
+  - apiGroups: ["", "apps", "batch", "networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  # Xem node + metrics phục vụ triage
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "namespaces", "events"]
+    verbs: ["get", "list", "watch"]
+  # Quản workload cross-namespace (restart, scale, cordon qua deployment)
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["get", "list", "watch", "delete"]
+  # Quản cluster-level enforcement (Gatekeeper) — đặc thù vai trò SRE
+  - apiGroups: ["constraints.gatekeeper.sh", "templates.gatekeeper.sh", "status.gatekeeper.sh"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Đọc RBAC để audit, KHÔNG ghi
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "watch"]
+  # Quản guardrail tài nguyên (W10 D3)
+  - apiGroups: [""]
+    resources: ["resourcequotas", "limitranges"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sre
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sre
+subjects:
+  - kind: ServiceAccount
+    name: sre
+    namespace: w10-demo
+  - kind: Group
+    name: sres
+    apiGroup: rbac.authorization.k8s.io

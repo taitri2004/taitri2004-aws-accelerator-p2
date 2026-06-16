@@ -1,0 +1,22 @@
+# Pod CHỈ vi phạm rule non-root (chạy root), còn lại tuân thủ:
+#  - tag pin cụ thể (qua K8sBlockLatestTag deny)
+#  - có cpu + memory limit (qua K8sRequiredResources deny + VAP Deny)
+#  - KHÔNG set runAsNonRoot -> vi phạm K8sRequireRunAsNonRoot
+# Vì require-nonroot đang `dryrun` (audit), pod này VẪN ĐƯỢC ADMIT.
+# So với bad-pod (bị deny): minh hoạ trực tiếp audit-mode vs enforce.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: audit-root-pod
+  namespace: w10-demo
+  labels:
+    team: platform
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27-alpine     # pin tag -> pass block-latest-tag
+      resources:
+        limits:
+          cpu: 100m
+          memory: 64Mi             # có limit -> pass required-resources + VAP
+      # KHÔNG set securityContext.runAsNonRoot -> chỉ vi phạm rule dryrun

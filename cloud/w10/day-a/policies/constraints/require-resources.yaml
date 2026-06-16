@@ -1,0 +1,12 @@
+# ENFORCE: Pod trong w10-demo phải set cpu + memory limit.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredResources
+metadata:
+  name: pods-must-have-limits
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["w10-demo"]

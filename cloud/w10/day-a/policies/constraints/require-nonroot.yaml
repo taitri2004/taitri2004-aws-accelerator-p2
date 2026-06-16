@@ -1,0 +1,16 @@
+# AUDIT (dryrun): minh hoạ audit mode vs enforce.
+# Constraint này KHÔNG chặn, chỉ ghi vi phạm vào status.totalViolations.
+# Cuối tuần flip `dryrun` -> `deny` để đủ 4 constraint enforce.
+#   kubectl get k8srequirerunasnonroot require-nonroot \
+#     -o jsonpath='{.status.totalViolations}'
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireRunAsNonRoot
+metadata:
+  name: require-nonroot
+spec:
+  enforcementAction: dryrun
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["w10-demo"]
