@@ -1,0 +1,30 @@
+# Kyverno: verify bằng KEY-BASED (cosign public key). Dùng khi không muốn phụ
+# thuộc Sigstore public (offline / air-gapped). Thay publicKeys bằng nội dung
+# cosign.pub thật (sinh bằng `cosign generate-key-pair`).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-key
+spec:
+  validationFailureAction: Enforce
+  background: false
+  failurePolicy: Fail
+  rules:
+    - name: verify-key-signature
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["w10-secrets"]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/taitri2004/w10-app*"
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      REPLACE_WITH_COSIGN_PUB_KEY
+                      -----END PUBLIC KEY-----

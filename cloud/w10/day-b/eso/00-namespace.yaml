@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: w10-secrets
+  labels:
+    team: platform
+---
+# ServiceAccount cho ESO auth tới AWS Secrets Manager qua IRSA (trên EKS).
+# Annotation role-arn điền khi chạy thật trên EKS; bỏ qua nếu dùng provider fake.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso-irsa
+  namespace: w10-secrets
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/eso-secrets-reader

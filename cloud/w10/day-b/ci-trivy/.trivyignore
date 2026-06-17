@@ -1,0 +1,6 @@
+# CVE được MIỄN tạm thời — mỗi dòng phải có: lý do + owner + ngày hết hạn.
+# Quá hạn -> xoá dòng, để Trivy chặn lại. Đây là "exception policy CVE".
+#
+# Ví dụ (mẫu — bỏ comment khi thực sự cần miễn một CVE chưa có bản vá):
+# owner: platform-team | expiry: 2026-07-15 | lý do: chưa có fix upstream, rủi ro thấp (không expose)
+# CVE-2024-XXXXX

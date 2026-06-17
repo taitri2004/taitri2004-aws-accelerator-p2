@@ -1,0 +1,37 @@
+# Consumer đọc secret qua VOLUME MOUNT (file), KHÔNG qua env -> khi Secret đổi,
+# kubelet tự cập nhật file trong pod mà không cần restart. In giá trị mỗi 5s để
+# quan sát rotation.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-consumer
+  namespace: w10-secrets
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: secret-consumer }
+  template:
+    metadata:
+      labels: { app: secret-consumer }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "$(date +%T) db-password = $(cat /etc/secret/db-password)";
+                sleep 5;
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+          volumeMounts:
+            - name: app-secret
+              mountPath: /etc/secret
+              readOnly: true
+      volumes:
+        - name: app-secret
+          secret:
+            secretName: app-secret

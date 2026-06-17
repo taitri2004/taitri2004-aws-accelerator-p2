@@ -1,0 +1,18 @@
+# Pod dùng image khớp imageReferences nhưng CHƯA có chữ ký hợp lệ.
+# Kỳ vọng: Kyverno verifyImages từ chối admission.
+#   Error: ... failed to verify image ghcr.io/taitri2004/w10-app:unsigned ...
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-app
+  namespace: w10-secrets
+  labels:
+    team: platform
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/taitri2004/w10-app:unsigned
+      resources:
+        limits:
+          cpu: 50m
+          memory: 32Mi

@@ -13,11 +13,11 @@ Tinh thần W10: chặn vi phạm **ở cluster level** (admission control), kh�
 | Ngày | Chủ đề | Section |
 |---|---|---|
 | D1 | RBAC + Admission Policy | §1 RBAC · §2 ServiceAccount · §3 `auth can-i` · §4 OPA/Gatekeeper · §5 VAP native · §6 audit vs enforce |
-| D2 | Secrets + Supply Chain | (bổ sung T3 16/06) |
+| D2 | Secrets + Supply Chain | §7 ESO + Secrets Manager · §8 rotation no-restart · §9 Trivy CI · §10 Cosign/Sigstore · §11 verify signature · §12 exception CVE |
 | D3 | Platform Integration + Cost | (bổ sung T4 17/06) |
 | Lab | 6-risk cleanup + enforcement | (onsite T5–T6) |
 
-> File này hiện viết đầy đủ phần **D1**. D2/D3 sẽ nối thêm section đúng ngày.
+> File này hiện viết đầy đủ **D1 + D2**. D3 sẽ nối thêm section đúng ngày.
 
 ---
 
@@ -179,6 +179,121 @@ audit, ba constraint còn lại `deny`. Cuối tuần flip tất cả sang enfor
 
 ---
 
+## §7. External Secrets Operator (ESO) + AWS Secrets Manager
+
+Vấn đề: secret không nên nằm trong Git (kể cả Sealed Secrets vẫn phải commit
+ciphertext). ESO đảo hướng: **nguồn sự thật là một secret store ngoài** (AWS
+Secrets Manager, Vault, GCP SM...), ESO pull về và **sinh ra `Secret` của K8s**.
+
+Ba object:
+
+| Object | Vai trò |
+|---|---|
+| `SecretStore` / `ClusterSecretStore` | Khai báo provider + cách auth (vd AWS SM, region, IRSA) |
+| `ExternalSecret` | "Lấy key X từ store, ghi vào `Secret` Y", có `refreshInterval` |
+| `Secret` (do ESO tạo) | Secret K8s bình thường, workload dùng như thường |
+
+```yaml
+kind: ExternalSecret
+spec:
+  refreshInterval: 15s            # ESO poll store mỗi 15s
+  secretStoreRef: { name: aws-secrets, kind: ClusterSecretStore }
+  target: { name: app-secret }    # tên Secret K8s sinh ra
+  data:
+    - secretKey: db-password       # key trong Secret K8s
+      remoteRef: { key: prod/app, property: db_password }  # trong AWS SM
+```
+
+Auth trên EKS = **IRSA** (ServiceAccount gắn IAM role), không nhét access key.
+Local/offline có thể dùng provider `fake` (giá trị inline) để demo cơ chế.
+
+## §8. Rotation < 60s, không restart pod
+
+Yêu cầu W10: đổi secret ở store → workload thấy giá trị mới trong < 60s mà
+**không restart**. Mấu chốt là cách workload đọc secret:
+
+| Cách dùng secret | Cập nhật khi Secret đổi? |
+|---|---|
+| `env` / `envFrom` (biến môi trường) | **Không** — phải restart pod |
+| Volume mount (file) | **Có** — kubelet tự refresh file trong pod |
+
+→ Để rotation no-restart: mount Secret dạng **volume** (file), app đọc lại file.
+Chuỗi: rotate ở store → ESO sync (`refreshInterval`) cập nhật Secret K8s →
+kubelet cập nhật file mount → app đọc giá trị mới. Tổng độ trễ ≈ refreshInterval
++ chu kỳ sync của kubelet (vài chục giây). Dùng `refreshInterval: 10s` cho demo.
+
+## §9. Trivy — quét image trong CI
+
+Trivy quét image tìm CVE (OS packages + app deps), secret lộ, misconfig. Trong
+CI đặt **fail-on HIGH/CRITICAL** để chặn build có lỗ hổng nghiêm trọng:
+
+```bash
+trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed myimg:tag
+```
+
+- `--exit-code 1`: có CVE khớp → fail job.
+- `--ignore-unfixed`: bỏ qua CVE chưa có bản vá (giảm nhiễu).
+- `.trivyignore`: danh sách CVE được miễn **có thời hạn** (ghi rõ ngày + lý do).
+
+## §10. Cosign / Sigstore — ký image
+
+Cosign ký digest của image, lưu chữ ký cạnh image trong registry (OCI artifact).
+Hai chế độ:
+
+| | Keyless (OIDC) | Key-based |
+|---|---|---|
+| Khoá | Không giữ khoá; ký bằng danh tính OIDC (GitHub Actions token), cert ngắn hạn từ Fulcio, log vào Rekor | Cặp khoá `cosign.key`/`cosign.pub` |
+| Hợp với | CI/CD (GitHub OIDC), audit công khai | Offline, không muốn phụ thuộc Sigstore public |
+| Verify theo | issuer + subject (vd repo + workflow) | public key |
+
+```bash
+# keyless (CI): COSIGN_EXPERIMENTAL=1, danh tính từ OIDC
+cosign sign myimg@sha256:...
+# key-based
+cosign generate-key-pair
+cosign sign --key cosign.key myimg@sha256:...
+```
+
+## §11. Verify signature ở admission
+
+Câu hỏi "verify ở đâu" (CI vs registry vs admission): **admission là chốt cuối**
+— dù ai push gì vào registry, cluster chỉ chạy image có chữ ký hợp lệ.
+
+Dùng **Kyverno** `verifyImages` (Gatekeeper không verify chữ ký gọn bằng):
+
+```yaml
+kind: ClusterPolicy
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: verify-signature
+      match: { any: [{ resources: { kinds: [Pod] } }] }
+      verifyImages:
+        - imageReferences: ["ghcr.io/org/*"]
+          attestors:
+            - entries:
+                - keyless:                       # hoặc key: {publicKeys: ...}
+                    issuer: https://token.actions.githubusercontent.com
+                    subject: https://github.com/org/repo/.github/workflows/*
+```
+
+Image không có chữ ký khớp → admission **reject** (đáp ứng acceptance W10).
+
+## §12. Exception policy CVE (có thời hạn)
+
+Đôi khi CVE chưa vá nhưng phải ship. Exception phải **có chủ, có hạn, có lý do**,
+không phải tắt vĩnh viễn:
+
+- Trivy: dòng trong `.trivyignore` kèm comment ngày hết hạn + owner.
+- Kyverno: `PolicyException` giới hạn đúng resource/namespace.
+- ADR ghi quyết định: CVE nào, vì sao chấp nhận, review lại khi nào.
+
+SLSA (supply chain levels) là khung trưởng thành: từ "có provenance" (L1) tới
+"build cô lập, không giả mạo được" (L3+). Trivy + Cosign + verify-at-admission là
+các mảnh ghép tiến lên SLSA cao hơn.
+
+---
+
 ## Tài liệu nguồn (D1)
 
 - Kubernetes RBAC — https://kubernetes.io/docs/reference/access-authn-authz/rbac
@@ -187,3 +302,12 @@ audit, ba constraint còn lại `deny`. Cuối tuần flip tất cả sang enfor
 - ValidatingAdmissionPolicy — https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy
 - Kyverno — https://kyverno.io/docs
 - EKS Best Practices (RBAC/IRSA) — https://aws.github.io/aws-eks-best-practices/security/docs
+
+## Tài liệu nguồn (D2)
+
+- AWS Secrets Manager — https://docs.aws.amazon.com/secretsmanager
+- External Secrets Operator — https://external-secrets.io/latest
+- Trivy — https://aquasecurity.github.io/trivy
+- Cosign / Sigstore — https://docs.sigstore.dev/cosign/overview
+- Kyverno verifyImages — https://kyverno.io/policies/?policytypes=verifyImages
+- SLSA — https://slsa.dev/spec/v1.0/levels

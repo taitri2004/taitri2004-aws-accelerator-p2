@@ -1,0 +1,32 @@
+# Kyverno: chỉ admit image có chữ ký KEYLESS hợp lệ (ký bởi GitHub Actions OIDC
+# của đúng repo). Image không ký / ký sai danh tính -> admission REJECT.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-keyless
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: verify-keyless-signature
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["w10-secrets"]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/taitri2004/w10-app*"
+          required: true
+          mutateDigest: true
+          verifyDigest: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    subject: "https://github.com/taitri2004/*"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"

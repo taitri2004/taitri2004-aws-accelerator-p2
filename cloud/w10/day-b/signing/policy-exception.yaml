@@ -1,0 +1,23 @@
+# Break-glass: miễn verify chữ ký cho ĐÚNG một workload, CÓ THỜI HẠN.
+# Lý do + ngày hết hạn ghi trong adr/0001-image-signing-and-exceptions.md.
+# Hết hạn phải xoá file này (Kyverno không tự hết hạn -> rà bằng review/CI).
+apiVersion: kyverno.io/v2
+kind: PolicyException
+metadata:
+  name: legacy-vendor-image-exception
+  namespace: w10-secrets
+  annotations:
+    expiry: "2026-07-15"           # review/xoá trước ngày này
+    owner: "platform-team"
+    adr: "cloud/w10/day-b/signing/adr/0001-image-signing-and-exceptions.md"
+spec:
+  exceptions:
+    - policyName: verify-image-keyless
+      ruleNames:
+        - verify-keyless-signature
+  match:
+    any:
+      - resources:
+          kinds: ["Pod"]
+          namespaces: ["w10-secrets"]
+          names: ["legacy-vendor-*"]

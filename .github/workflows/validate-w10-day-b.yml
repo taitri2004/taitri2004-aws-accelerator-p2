@@ -1,0 +1,26 @@
+name: validate-w10-day-b
+
+on:
+  pull_request:
+    paths:
+      - "cloud/w10/day-b/eso/**"
+      - "cloud/w10/day-b/signing/**"
+      - ".github/workflows/validate-w10-day-b.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSLo kc.tgz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kc.tgz
+          sudo mv kubeconform /usr/local/bin/
+      - name: Validate Kubernetes manifests
+        # -ignore-missing-schemas: CRD của ESO (ExternalSecret, ClusterSecretStore)
+        # và Kyverno (ClusterPolicy, PolicyException) không có schema công khai.
+        run: |
+          kubeconform -strict -summary -ignore-missing-schemas \
+            cloud/w10/day-b/eso/ \
+            cloud/w10/day-b/signing/
