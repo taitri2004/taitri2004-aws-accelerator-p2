@@ -1,0 +1,4 @@
+# Copy thanh terraform.tfvars roi dien gia tri that (tfvars bi gitignore).
+alert_email   = "you@example.com"
+threshold_usd = 20
+# region      = "us-east-1"   # Cost Explorer la global

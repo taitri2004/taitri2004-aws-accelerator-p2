@@ -1,0 +1,22 @@
+# Guardrail từng container: cấp default request/limit khi container quên khai báo
+# (để không vỡ vì ResourceQuota), và chặn giá trị quá to/nhỏ.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: platform-limits
+  namespace: platform-app
+spec:
+  limits:
+    - type: Container
+      default: # limit mặc định nếu container không set
+        cpu: 200m
+        memory: 256Mi
+      defaultRequest: # request mặc định nếu container không set
+        cpu: 50m
+        memory: 64Mi
+      max: # trần cho một container
+        cpu: "1"
+        memory: 1Gi
+      min: # sàn cho một container
+        cpu: 10m
+        memory: 16Mi

@@ -1,0 +1,11 @@
+# Namespace ứng dụng của platform, bật Pod Security Standards mức `restricted`
+# (khớp hardening W10: non-root, drop caps...). Có label team để pass Gatekeeper
+# K8sRequiredLabels của D1.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-app
+  labels:
+    team: platform
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted

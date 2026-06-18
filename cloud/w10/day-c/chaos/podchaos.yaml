@@ -1,0 +1,18 @@
+# Chaos Mesh PodChaos (tuỳ chọn — cần cài Chaos Mesh trước).
+# Xoá ngẫu nhiên 1 pod khớp selector, lặp mỗi 30s trong 2 phút.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-web
+  namespace: platform-app
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - platform-app
+    labelSelectors:
+      app: web
+  scheduler:
+    cron: "@every 30s"
+  duration: "2m"

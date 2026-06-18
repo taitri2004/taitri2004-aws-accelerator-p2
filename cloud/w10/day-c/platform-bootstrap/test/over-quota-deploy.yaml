@@ -1,0 +1,35 @@
+# Deployment đòi tài nguyên VƯỢT quota (10 replica x 512Mi = 5Gi > requests.memory 2Gi).
+# Kỳ vọng: chỉ một số pod tạo được, số còn lại bị ResourceQuota từ chối.
+#   kubectl -n platform-app describe rs -l app=hog | findstr "exceeded quota"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quota-hog
+  namespace: platform-app
+spec:
+  replicas: 10
+  selector:
+    matchLabels: { app: hog }
+  template:
+    metadata:
+      labels: { app: hog, team: platform }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

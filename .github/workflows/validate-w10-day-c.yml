@@ -1,0 +1,36 @@
+name: validate-w10-day-c
+
+on:
+  pull_request:
+    paths:
+      - "cloud/w10/day-c/**"
+      - ".github/workflows/validate-w10-day-c.yml"
+
+jobs:
+  k8s:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSLo kc.tgz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kc.tgz
+          sudo mv kubeconform /usr/local/bin/
+      - name: Validate Kubernetes manifests
+        # -ignore-missing-schemas: CRD Chaos Mesh (PodChaos) không có schema công khai.
+        run: |
+          kubeconform -strict -summary -ignore-missing-schemas \
+            cloud/w10/day-c/platform-bootstrap/ \
+            cloud/w10/day-c/chaos/
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: fmt + validate (cost)
+        working-directory: cloud/w10/day-c/cost
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate

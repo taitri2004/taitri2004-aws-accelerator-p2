@@ -1,0 +1,24 @@
+# Pod KHÔNG khai báo resources. Với LimitRange, container được GÁN default
+# request/limit -> pod vẫn chạy (không bị ResourceQuota từ chối).
+# Kiểm chứng: kubectl -n platform-app get pod no-resources -o \
+#   jsonpath='{.spec.containers[0].resources}'  -> thấy default đã được inject.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-resources
+  namespace: platform-app
+  labels:
+    team: platform
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: registry.k8s.io/pause:3.10
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]

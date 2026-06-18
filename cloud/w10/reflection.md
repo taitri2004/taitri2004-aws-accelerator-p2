@@ -8,8 +8,10 @@ image. Kết thúc = mini platform end-to-end sẵn cho capstone W11–W12.
 
 - D1: RBAC (`viewer`/`developer`/`sre` + `auth can-i`) + OPA/Gatekeeper (4
   constraint, ConstraintTemplate vs Constraint) + VAP native + audit vs enforce.
-- D2: Secrets Rotation + Supply Chain *(làm T3 16/06)*.
-- D3: Platform Integration + Runbook + Cost Guard *(làm T4 17/06)*.
+- D2: Secrets Rotation (ESO + AWS Secrets Manager, rotation no-restart) + Supply
+  Chain (Trivy CI + Cosign sign + verify signature ở admission + exception CVE).
+- D3: Platform Integration (bootstrap W8→W10 < 2h) + ResourceQuota/LimitRange +
+  chaos test + runbook/postmortem + AWS Cost Anomaly Detection.
 - Lab onsite: 6-risk cluster cleanup + cluster-level enforcement *(T5–T6)*.
 
 ## Khó nhất

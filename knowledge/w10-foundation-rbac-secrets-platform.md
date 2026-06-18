@@ -14,10 +14,10 @@ Tinh thần W10: chặn vi phạm **ở cluster level** (admission control), kh�
 |---|---|---|
 | D1 | RBAC + Admission Policy | §1 RBAC · §2 ServiceAccount · §3 `auth can-i` · §4 OPA/Gatekeeper · §5 VAP native · §6 audit vs enforce |
 | D2 | Secrets + Supply Chain | §7 ESO + Secrets Manager · §8 rotation no-restart · §9 Trivy CI · §10 Cosign/Sigstore · §11 verify signature · §12 exception CVE |
-| D3 | Platform Integration + Cost | (bổ sung T4 17/06) |
+| D3 | Platform Integration + Cost | §13 tích hợp W8→W10 · §14 ResourceQuota + LimitRange · §15 chaos test · §16 runbook · §17 Cost Anomaly Detection |
 | Lab | 6-risk cleanup + enforcement | (onsite T5–T6) |
 
-> File này hiện viết đầy đủ **D1 + D2**. D3 sẽ nối thêm section đúng ngày.
+> File này hiện viết đầy đủ **D1 + D2 + D3**.
 
 ---
 
@@ -292,6 +292,65 @@ SLSA (supply chain levels) là khung trưởng thành: từ "có provenance" (L1
 "build cô lập, không giả mạo được" (L3+). Trivy + Cosign + verify-at-admission là
 các mảnh ghép tiến lên SLSA cao hơn.
 
+## §13. Platform integration — ghép W8 → W10
+
+Mục tiêu cuối W10: từ repo dựng **mini platform end-to-end lên fresh cluster
+trong < 2h**. Các lớp xếp chồng:
+
+| Lớp | Tuần | Thành phần |
+|---|---|---|
+| Hạ tầng | W8 | VPC, EKS/cluster, IaC (Terraform) |
+| Delivery | W9 | ArgoCD (GitOps) + Prometheus/Grafana (obs) + Argo Rollouts (canary) |
+| Bảo mật | W10 | RBAC 3 role + Gatekeeper 4 constraint + ESO + verify signature |
+| Guardrail | W10-D3 | ResourceQuota + LimitRange + runbook + cost anomaly |
+
+Thứ tự bootstrap (mỗi lớp là tiền đề lớp sau): cluster → ArgoCD → app-of-apps kéo
+toàn bộ (obs, canary, security policy) → namespace + quota/limit → smoke test.
+ArgoCD biến "deploy platform" thành "apply một root app", nên thời gian dựng lại
+chủ yếu là chờ image pull + reconcile.
+
+## §14. ResourceQuota + LimitRange — guardrail tài nguyên
+
+Hai cơ chế bổ sung nhau, chặn "một team ăn hết cluster":
+
+| | ResourceQuota | LimitRange |
+|---|---|---|
+| Phạm vi | Tổng cả namespace | Từng container/pod |
+| Chặn gì | Tổng cpu/mem/số pod/số secret... vượt hạn mức | Container không set request/limit, hoặc set quá to/nhỏ |
+| Hệ quả | Pod thứ N vượt quota bị từ chối | Container thiếu request/limit được **gán default**, hoặc bị reject nếu ngoài min/max |
+
+Quan trọng: khi đã có ResourceQuota cho cpu/memory, **mọi pod buộc phải set
+request/limit** nếu không sẽ bị từ chối → LimitRange cấp default để pod cũ không
+vỡ. Đây là "cost guard" ở tầng cluster, khớp với Gatekeeper `require-resources`
+của D1 (admission) — quota là hạn mức tổng, constraint là bắt buộc khai báo.
+
+## §15. Chaos engineering — kiểm thử khả năng phục hồi
+
+Chaos = cố tình gây lỗi để chứng minh hệ thống tự hồi. Bài cơ bản: xoá pod →
+Deployment/ReplicaSet tạo lại; với GitOps thì ArgoCD self-heal kéo về desired;
+với canary thì metric xấu auto-abort. Công cụ: Litmus/Chaos Mesh (CRD experiment)
+hoặc đơn giản `kubectl delete pod` + quan sát. Nguyên tắc: có giả thuyết ("xoá 1
+pod, service vẫn 200"), có steady-state metric để so trước/sau, blast radius nhỏ.
+
+## §16. Runbook — quy trình xử lý sự cố
+
+Runbook = checklist hành động cho một sự cố cụ thể, để người trực làm theo mà
+không phải nghĩ lại từ đầu lúc 3h sáng. Khác postmortem (viết SAU sự cố để học).
+Cấu trúc runbook: Triệu chứng → Tác động → Cách phát hiện → Các bước xử lý →
+Leo thang. Khớp IR playbook 6 bước (Detect → Triage → Contain → Eradicate →
+Recover → Post-mortem) học ở live T4.
+
+## §17. AWS Cost Anomaly Detection
+
+Dịch vụ ML của AWS Cost Management: học pattern chi tiêu, cảnh báo khi tốn bất
+thường (vd ai đó bật cụm GPU). Hai object:
+
+- `aws_ce_anomaly_monitor` — theo dõi phạm vi nào (toàn account / theo service).
+- `aws_ce_anomaly_subscription` — ngưỡng + nơi nhận cảnh báo (email/SNS).
+
+Bổ sung cho guardrail trong cluster (quota chặn *trong* cluster; cost anomaly bắt
+chi phí *AWS-level* mà quota không thấy, vd NAT gateway, data transfer).
+
 ---
 
 ## Tài liệu nguồn (D1)
@@ -311,3 +370,11 @@ các mảnh ghép tiến lên SLSA cao hơn.
 - Cosign / Sigstore — https://docs.sigstore.dev/cosign/overview
 - Kyverno verifyImages — https://kyverno.io/policies/?policytypes=verifyImages
 - SLSA — https://slsa.dev/spec/v1.0/levels
+
+## Tài liệu nguồn (D3)
+
+- ResourceQuota — https://kubernetes.io/docs/concepts/policy/resource-quotas
+- LimitRange — https://kubernetes.io/docs/concepts/policy/limit-range
+- AWS Cost Anomaly Detection — https://docs.aws.amazon.com/cost-management/latest/userguide/manage-ad.html
+- Chaos Mesh / Litmus — https://chaos-mesh.org · https://litmuschaos.io
+- Google SRE Workbook (postmortem) — https://sre.google/workbook/example-postmortem
