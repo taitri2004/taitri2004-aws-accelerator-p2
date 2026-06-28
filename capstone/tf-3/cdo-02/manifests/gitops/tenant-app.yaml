@@ -1,0 +1,35 @@
+# ArgoCD Application cho tenant workload (mẫu, W12) — ADR-009.
+# Điểm mấu chốt: ignoreDifferences cho field do SELF-HEAL CONTROLLER sở hữu
+# (replicas, container resources) → ArgoCD KHÔNG revert lệnh urgent direct-patch
+# (SCALE_REPLICAS / PATCH_MEMORY_LIMIT). GitOps vẫn quản phần khai báo còn lại.
+# Đã verify thực nghiệm: thiếu block này, ArgoCD selfHeal revert scale 3→1 (race condition).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: onlineboutique-tnt-a
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/<org>/gitops-manifests        # repo GitOps (deferred path commit vào đây)
+    targetRevision: HEAD
+    path: workloads/onlineboutique-tnt-a
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: onlineboutique-tnt-a
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true                 # vẫn tự sửa drift ngoài ý muốn (do người ngoài đổi)
+  # Field self-heal controller chủ động đổi (urgent path) → ArgoCD bỏ qua, không revert:
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas             # SCALE_REPLICAS (urgent)
+    - group: apps
+      kind: Deployment
+      jqPathExpressions:
+        - '.spec.template.spec.containers[].resources'   # PATCH_MEMORY_LIMIT (urgent)
+# Lưu ý: ROLLOUT_UNDO và config vĩnh viễn KHÔNG dùng urgent-patch trên app ArgoCD-managed
+# (sẽ bị re-apply bản cũ từ Git) → đi path deferred (executor commit Git → ArgoCD sync).

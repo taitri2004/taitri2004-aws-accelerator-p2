@@ -1,0 +1,48 @@
+# NetworkPolicy cho AI engine (deployment-contract §5). Thay AWS SG bằng K8s NP.
+# §5A Ingress: chỉ port 8080 từ pod controller CDO; chặn internet + cross-namespace.
+# §5B Egress : chỉ 443 tới VPC Endpoint (S3/DDB/Bedrock, nằm trong VPC CIDR) + DNS;
+#              CẤM egress tới K8s API server (API server public không thuộc VPC CIDR → bị chặn).
+# Defense-in-depth: engine vốn không có kubeconfig (ADR-007) và IRSA không có eks:* (§3C).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-engine-ingress
+  namespace: self-heal-system
+spec:
+  podSelector:
+    matchLabels: { app: ai-engine }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # Chỉ executor/controller CDO ở ns platform (nhãn app.kubernetes.io/name=cdo-self-heal-controller)
+        - namespaceSelector:
+            matchLabels: { "kubernetes.io/metadata.name": platform }
+          podSelector:
+            matchLabels: { "app.kubernetes.io/name": cdo-self-heal-controller }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-engine-egress
+  namespace: self-heal-system
+spec:
+  podSelector:
+    matchLabels: { app: ai-engine }
+  policyTypes: [Egress]
+  egress:
+    # DNS resolve (kube-dns ở kube-system)
+    - to:
+        - namespaceSelector:
+            matchLabels: { "kubernetes.io/metadata.name": kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    # HTTPS chỉ tới VPC Endpoint (S3/DynamoDB/Bedrock) — private IP trong VPC CIDR 10.0.0.0/16.
+    # API server EKS (public endpoint) KHÔNG thuộc dải này → egress bị chặn (đúng §5B).
+    - to:
+        - ipBlock: { cidr: 10.0.0.0/16 }
+      ports:
+        - { protocol: TCP, port: 443 }

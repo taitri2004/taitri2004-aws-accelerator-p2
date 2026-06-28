@@ -1,0 +1,47 @@
+# RBAC least-privilege cho CDO executor (deployment-contract §3.D).
+# Executor SA ở ns `platform` (ADR-001/007); Role tạo PER tenant-namespace (KHÔNG ClusterRole
+# → phân lập blast-radius theo namespace). Verb tối thiểu đủ để execute 5 action.
+# Explicit-deny: KHÔNG delete deployment/namespace, KHÔNG đụng kube-system, KHÔNG clusterrole,
+# KHÔNG scale replicas:0 (enforce thêm ở guardrails.check_action_policy).
+# Lặp block Role+RoleBinding cho mỗi tenant ns (onlineboutique-tnt-a, -tnt-b).
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tf3-cdo-executor-role
+  namespace: onlineboutique-tnt-a        # lặp cho mỗi tenant ns
+  labels: { app.kubernetes.io/name: cdo-self-heal-controller }
+rules:
+  # RESTART_DEPLOYMENT / PATCH_MEMORY_LIMIT / SCALE_REPLICAS / ROLLOUT_UNDO
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]      # KHÔNG "delete"
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch"]              # SCALE_REPLICAS
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list"]              # xác định revision cho ROLLOUT_UNDO
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]                      # thu telemetry xác thực
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "delete"] # CHỈ cho ROTATE_SECRET
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tf3-cdo-executor-binding
+  namespace: onlineboutique-tnt-a        # lặp cho mỗi tenant ns
+subjects:
+  - kind: ServiceAccount
+    name: tf3-cdo-controller             # controller SA (§3.D) — ns platform (ADR-001/007)
+    namespace: platform
+roleRef:
+  kind: Role
+  name: tf3-cdo-executor-role
+  apiGroup: rbac.authorization.k8s.io

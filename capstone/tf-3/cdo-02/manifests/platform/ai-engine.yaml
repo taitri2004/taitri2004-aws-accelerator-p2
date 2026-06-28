@@ -1,0 +1,89 @@
+# AI engine TỰ HOST trong EKS của CDO-2 (ADR-008).
+# Engine = artifact (Docker image) AIO giao; decide-only, gọi Bedrock Claude 3 Haiku qua IRSA.
+# Boundary ADR-007: engine CHỈ expose /v1/*; KHÔNG có RBAC/kubeconfig vào workload tenant.
+# Namespace, resource, HPA, probe theo deployment-contract §2A/§2B/§7.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: self-heal-system            # deployment-contract §2A (Target Namespace)
+  labels:
+    app.kubernetes.io/part-of: tf3-self-heal
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-engine-sa
+  namespace: self-heal-system
+  annotations:
+    # IRSA: role chỉ có bedrock:InvokeModel (Claude 3 Haiku) — KHÔNG có quyền EKS/K8s.
+    # Chi phí Bedrock trên account CDO-2 ($200 credit), cost cap $50/ngày (engine tự enforce).
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/tf-3-cdo2-ai-engine-bedrock-role
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-engine
+  namespace: self-heal-system
+spec:
+  replicas: 2                       # deployment-contract §2B: min 2
+  selector:
+    matchLabels: { app: ai-engine }
+  template:
+    metadata:
+      labels: { app: ai-engine }
+    spec:
+      serviceAccountName: ai-engine-sa
+      containers:
+        - name: ai-engine          # deployment-contract §2A (Container name)
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/tf-3-ai-engine:latest  # image AIO giao
+          ports: [{ containerPort: 8080 }]
+          env:
+            - { name: AWS_REGION, value: us-east-1 }
+            - { name: BEDROCK_MODEL_ID, value: anthropic.claude-3-haiku-20240307-v1:0 }
+          resources:                # deployment-contract §2A: 500m/1000m CPU, 1024/2048Mi mem
+            requests: { cpu: "500m", memory: 1024Mi }
+            limits:   { cpu: "1000m", memory: 2048Mi }
+          readinessProbe:           # §7: /ready khi Bedrock/DDB/S3 sẵn sàng
+            httpGet: { path: /ready, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:            # §7: /health
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler         # deployment-contract §2B: min2/max10, CPU>=70% & Mem>=80%
+metadata:
+  name: ai-engine
+  namespace: self-heal-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-engine
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: 80 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-engine
+  namespace: self-heal-system
+spec:
+  selector: { app: ai-engine }
+  type: ClusterIP
+  ports: [{ port: 8080, targetPort: 8080 }]
+  # deployment-contract §2C: http://ai-engine.self-heal-system.svc.cluster.local:8080/

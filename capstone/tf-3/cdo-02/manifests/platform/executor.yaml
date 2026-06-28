@@ -1,0 +1,43 @@
+# Self-Heal Executor in-cluster (ADR-001). Bên DUY NHẤT chạm K8s workload (ADR-007).
+# Trỏ vào AI engine tự host (ADR-008) qua service DNS nội bộ.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tf3-cdo-controller
+  namespace: platform
+  annotations:
+    # IRSA: dynamodb (idempotency) + s3 (audit). Quyền K8s workload cấp qua RBAC per-tenant (xem tenant-provision).
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/tf-3-cdo2-executor-role
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: self-heal-executor
+  namespace: platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: self-heal-executor }
+  template:
+    metadata:
+      # app=cdo-self-heal-controller: nhãn engine NetworkPolicy ingress allow (deployment-contract §5A)
+      labels: { app: self-heal-executor, "app.kubernetes.io/name": cdo-self-heal-controller }
+    spec:
+      serviceAccountName: tf3-cdo-controller
+      containers:
+        - name: executor
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/tf-3-cdo2-executor:latest
+          env:
+            # Engine tự host trong cluster (ADR-008, deployment-contract §2C) — bootstrap đầu W12 dùng skeleton chung
+            - { name: ENGINE_BASE_URL, value: "http://ai-engine.self-heal-system.svc.cluster.local:8080" }
+            - { name: TENANT_ID, value: "6c8b4b2b-4d45-4209-a1b4-4b532d56a31c" }   # cdo-2
+            # AI endpoint = Local Trust in-cluster (NetworkPolicy §5) — không SigV4. IRSA chỉ cho AWS services.
+            - { name: AUTH_MODE, value: "local_trust" }
+            - { name: EXECUTE_MODE, value: "live" }     # execute thật trên K8s (demo W12 §2.1)
+            - { name: AUDIT_SINK, value: "s3" }
+            - { name: IDEMPOTENCY_MODE, value: "dynamodb" }
+            - { name: AWS_REGION, value: "us-east-1" }
+          resources:
+            requests: { cpu: "100m", memory: 256Mi }
+            limits:   { cpu: "500m", memory: 512Mi }

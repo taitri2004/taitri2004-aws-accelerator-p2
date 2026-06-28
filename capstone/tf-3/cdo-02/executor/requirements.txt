@@ -1,0 +1,6 @@
+requests>=2.31
+# Optional - chỉ cần khi AUTH_MODE=sigv4 hoặc chạy thật trên AWS/K8s:
+botocore>=1.34        # SigV4 signing
+boto3>=1.34           # DynamoDB idempotency lock, S3 audit
+kubernetes>=29.0      # k8s executor (live mode)
+pytest>=8.0
